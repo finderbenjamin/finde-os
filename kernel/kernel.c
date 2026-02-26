@@ -5,12 +5,18 @@
 #include "heap.h"
 #include "idt.h"
 #include "keyboard.h"
+#include "multiboot1.h"
+#include "multiboot2.h"
+#include "paging.h"
 #include "panic.h"
+#include "pmm.h"
 #include "serial.h"
 #include "shell.h"
 #include "vga.h"
 
 extern void isr_4(void);
+extern uint8_t _kernel_start;
+extern uint8_t _kernel_end;
 
 #ifdef HEAP_TEST
 static void heap_test(void) {
@@ -48,7 +54,7 @@ static void keyboard_test(void) {
 }
 #endif
 
-void kernel_main(void) {
+void kernel_main(uint64_t mb_magic, uint64_t mb_info_addr) {
 #ifdef KEYBOARD_TEST
   serial_init();
   keyboard_init();
@@ -75,6 +81,26 @@ void kernel_main(void) {
   __asm__ volatile ("cli");
   heap_test();
   serial_write("HEAP_OK\n");
+  for (;;) {
+    __asm__ volatile ("hlt");
+  }
+#endif
+
+#ifdef VM_TEST
+  serial_init();
+
+  pmm_init((const multiboot2_info_t*)0);
+  uint64_t frame = pmm_alloc_frame();
+  if (frame == 0) {
+    panic("PMM_ALLOC_FAIL");
+  }
+  serial_write("PMM_OK\n");
+
+  paging_init((uint64_t)(uintptr_t)&_kernel_start, (uint64_t)(uintptr_t)&_kernel_end);
+  serial_write("PAGING_OK\n");
+  serial_write("VM_OK\n");
+
+  __asm__ volatile ("cli");
   for (;;) {
     __asm__ volatile ("hlt");
   }

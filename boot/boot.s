@@ -34,6 +34,8 @@ _start:
   cli
   mov $stack_top, %rsp
   mov %rsp, %rbp
+  mov %rax, %rdi
+  mov %rbx, %rsi
   call kernel_main
 
 hang:
