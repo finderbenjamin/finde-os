@@ -1,8 +1,10 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "console.h"
 #include "heap.h"
 #include "idt.h"
+#include "keyboard.h"
 #include "panic.h"
 #include "serial.h"
 #include "shell.h"
@@ -26,7 +28,38 @@ static void heap_test(void) {
 }
 #endif
 
+#ifdef KEYBOARD_TEST
+static void keyboard_test(void) {
+  if (keyboard_decode_scancode_for_test(0x1E, 0) != 'a') {
+    panic("KBD_BAD_A");
+  }
+  if (keyboard_decode_scancode_for_test(0x10, 1) != 'Q') {
+    panic("KBD_BAD_Q_UP");
+  }
+  if (keyboard_decode_scancode_for_test(0x39, 0) != ' ') {
+    panic("KBD_BAD_SPACE");
+  }
+  if (keyboard_decode_scancode_for_test(0x1C, 0) != '\n') {
+    panic("KBD_BAD_NL");
+  }
+  if (keyboard_decode_scancode_for_test(0x0E, 0) != '\b') {
+    panic("KBD_BAD_BS");
+  }
+}
+#endif
+
 void kernel_main(void) {
+#ifdef KEYBOARD_TEST
+  serial_init();
+  keyboard_init();
+  keyboard_test();
+  serial_write("KBD_OK\n");
+  __asm__ volatile ("cli");
+  for (;;) {
+    __asm__ volatile ("hlt");
+  }
+#endif
+
 #ifdef SHELL_TEST
   serial_init();
   heap_init();
@@ -68,6 +101,8 @@ void kernel_main(void) {
 
   ASSERT(1);
   heap_init();
+  console_init();
+  keyboard_init();
   shell_init();
   __asm__ volatile ("sti");
 

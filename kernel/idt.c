@@ -35,7 +35,6 @@ static uint16_t read_cs(void) {
   return cs;
 }
 
-
 extern void isr_0(void);
 extern void isr_1(void);
 extern void isr_2(void);
@@ -69,6 +68,7 @@ extern void isr_29(void);
 extern void isr_30(void);
 extern void isr_31(void);
 extern void irq_0(void);
+extern void irq_1(void);
 extern void irq_ignore(void);
 
 static void set_gate(int vec, void (*handler)(void), uint8_t flags, uint16_t selector) {
@@ -99,7 +99,8 @@ void idt_init(void) {
   }
 
   set_gate(0x20, irq_0, interrupt_gate, selector);
-  for (int i = 0x21; i <= 0x2F; ++i) {
+  set_gate(0x21, irq_1, interrupt_gate, selector);
+  for (int i = 0x22; i <= 0x2F; ++i) {
     set_gate(i, irq_ignore, interrupt_gate, selector);
   }
 
@@ -132,7 +133,7 @@ static void pic_remap(void) {
   outb(0xA1, icw4_8086);
   io_wait();
 
-  outb(0x21, 0xFE);
+  outb(0x21, 0xFC);
   io_wait();
   outb(0xA1, 0xFF);
   io_wait();

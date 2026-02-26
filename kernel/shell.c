@@ -3,9 +3,9 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "console.h"
 #include "heap.h"
 #include "idt.h"
-#include "serial.h"
 
 #define SHELL_MAX_LINE 80
 
@@ -17,7 +17,7 @@ static void write_u64(uint64_t value) {
   size_t i = 0;
 
   if (value == 0) {
-    serial_write("0");
+    console_write("0");
     return;
   }
 
@@ -27,16 +27,16 @@ static void write_u64(uint64_t value) {
   }
 
   while (i > 0) {
-    serial_write_char(buf[--i]);
+    console_write_char(buf[--i]);
   }
 }
 
 static void write_hex_u64(uint64_t value) {
   static const char* digits = "0123456789ABCDEF";
 
-  serial_write("0x");
+  console_write("0x");
   for (int shift = 60; shift >= 0; shift -= 4) {
-    serial_write_char(digits[(value >> shift) & 0xF]);
+    console_write_char(digits[(value >> shift) & 0xF]);
   }
 }
 
@@ -52,17 +52,17 @@ static int streq(const char* a, const char* b) {
 }
 
 static void shell_prompt(void) {
-  serial_write("finde-os> ");
+  console_write("finde-os> ");
 }
 
 static void cmd_help(void) {
-  serial_write("commands: help ticks malloc\n");
+  console_write("commands: help ticks malloc\n");
 }
 
 static void cmd_ticks(void) {
-  serial_write("ticks: ");
+  console_write("ticks: ");
   write_u64(timer_ticks_get());
-  serial_write("\n");
+  console_write("\n");
 }
 
 static void cmd_malloc(void) {
@@ -70,13 +70,13 @@ static void cmd_malloc(void) {
   void* b = kmalloc(32);
   void* c = kmalloc(64);
 
-  serial_write("malloc: ");
+  console_write("malloc: ");
   write_hex_u64((uint64_t)(uintptr_t)a);
-  serial_write(" ");
+  console_write(" ");
   write_hex_u64((uint64_t)(uintptr_t)b);
-  serial_write(" ");
+  console_write(" ");
   write_hex_u64((uint64_t)(uintptr_t)c);
-  serial_write("\n");
+  console_write("\n");
 }
 
 static void shell_execute_line(void) {
@@ -104,7 +104,7 @@ static void shell_execute_line(void) {
   } else if (streq(command, "malloc")) {
     cmd_malloc();
   } else {
-    serial_write("unknown\n");
+    console_write("unknown\n");
   }
 }
 
@@ -114,19 +114,19 @@ void shell_init_minimal(void) {
 
 void shell_init(void) {
   shell_init_minimal();
-  serial_write("finde-os shell\n");
+  console_write("finde-os shell\n");
   shell_prompt();
 }
 
 void shell_step(void) {
-  if (!serial_received()) {
+  if (!console_has_char()) {
     return;
   }
 
-  char c = serial_read_char();
+  char c = console_read_char();
 
   if (c == '\r' || c == '\n') {
-    serial_write("\n");
+    console_write("\n");
     g_line[g_line_len] = '\0';
     shell_execute_line();
     g_line_len = 0;
@@ -137,7 +137,7 @@ void shell_step(void) {
   if (c == 0x7F || c == '\b') {
     if (g_line_len > 0) {
       --g_line_len;
-      serial_write("\b \b");
+      console_write("\b \b");
     }
     return;
   }
@@ -145,7 +145,7 @@ void shell_step(void) {
   if (c >= 32 && c <= 126) {
     if (g_line_len < SHELL_MAX_LINE) {
       g_line[g_line_len++] = c;
-      serial_write_char(c);
+      console_write_char(c);
     }
   }
 }
