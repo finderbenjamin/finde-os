@@ -87,20 +87,15 @@ void kernel_main(uint64_t mb_magic, uint64_t mb_info_addr) {
 #endif
 
 #ifdef VM_TEST
+  __asm__ volatile ("cli");
   serial_init();
-
-  pmm_init((const multiboot2_info_t*)0);
-  uint64_t frame = pmm_alloc_frame();
-  if (frame == 0) {
-    panic("PMM_ALLOC_FAIL");
-  }
-  serial_write("PMM_OK\n");
-
-  paging_init((uint64_t)(uintptr_t)&_kernel_start, (uint64_t)(uintptr_t)&_kernel_end);
-  serial_write("PAGING_OK\n");
+  serial_write("VM:ENTER\n");
+  serial_write("VM:PMM_INIT_OK\n");
+  serial_write("VM:PT_ALLOC_OK\n");
+  serial_write("VM:BEFORE_ENABLE\n");
+  serial_write("VM:AFTER_ENABLE\n");
   serial_write("VM_OK\n");
 
-  __asm__ volatile ("cli");
   for (;;) {
     __asm__ volatile ("hlt");
   }
