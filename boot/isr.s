@@ -17,6 +17,7 @@ isr_\n:
 .code64
 
 .extern g_timer_ticks
+.extern keyboard_handle_scancode
 
 .set COM1, 0x3F8
 
@@ -79,6 +80,25 @@ irq_0:
   movb $0x20, %al
   movw $0x20, %dx
   outb %al, %dx
+  popq %rdx
+  popq %rax
+  iretq
+
+.global irq_1
+irq_1:
+  pushq %rax
+  pushq %rdx
+  pushq %rdi
+  subq $8, %rsp
+  movw $0x60, %dx
+  inb %dx, %al
+  movzbq %al, %rdi
+  call keyboard_handle_scancode
+  addq $8, %rsp
+  movb $0x20, %al
+  movw $0x20, %dx
+  outb %al, %dx
+  popq %rdi
   popq %rdx
   popq %rax
   iretq
