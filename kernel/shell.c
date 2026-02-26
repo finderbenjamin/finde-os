@@ -52,7 +52,7 @@ static int streq(const char* a, const char* b) {
 }
 
 static void shell_prompt(void) {
-  serial_write("> ");
+  serial_write("finde-os> ");
 }
 
 static void cmd_help(void) {
@@ -114,7 +114,7 @@ void shell_init_minimal(void) {
 
 void shell_init(void) {
   shell_init_minimal();
-  serial_write("finde shell\n");
+  serial_write("finde-os shell\n");
   shell_prompt();
 }
 

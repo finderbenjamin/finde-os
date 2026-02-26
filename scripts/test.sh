@@ -7,7 +7,7 @@ run_qemu() {
   rm -f "${log_file}"
   set +e
   timeout 10s qemu-system-x86_64 \
-    -cdrom build/os.iso \
+    -cdrom build/finde-os.iso \
     -serial stdio \
     -display none \
     -no-reboot \

@@ -6,6 +6,7 @@
 #include "panic.h"
 #include "serial.h"
 #include "shell.h"
+#include "vga.h"
 
 extern void isr_4(void);
 
