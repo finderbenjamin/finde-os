@@ -153,3 +153,7 @@ void interrupts_init(void) {
   pic_remap();
   pit_init();
 }
+
+uint64_t timer_ticks_get(void) {
+  return g_timer_ticks;
+}

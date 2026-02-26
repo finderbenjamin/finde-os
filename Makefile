@@ -13,6 +13,7 @@ PANIC_TEST?=0
 IDT_TEST?=0
 TIMER_TEST?=0
 HEAP_TEST?=0
+SHELL_TEST?=0
 
 ifeq ($(PANIC_TEST),1)
 CFLAGS += -DPANIC_TEST
@@ -30,6 +31,10 @@ ifeq ($(HEAP_TEST),1)
 CFLAGS += -DHEAP_TEST
 endif
 
+ifeq ($(SHELL_TEST),1)
+CFLAGS += -DSHELL_TEST
+endif
+
 all: $(BUILD)/os.iso
 
 $(BUILD):
@@ -41,7 +46,7 @@ $(BUILD)/boot.o: boot/boot.s | $(BUILD)
 $(BUILD)/isr.o: boot/isr.s | $(BUILD)
 	$(AS) $(ASFLAGS) boot/isr.s -o $(BUILD)/isr.o
 
-$(BUILD)/kernel.o: kernel/kernel.c kernel/heap.h kernel/idt.h kernel/panic.h kernel/serial.h | $(BUILD)
+$(BUILD)/kernel.o: kernel/kernel.c kernel/heap.h kernel/idt.h kernel/panic.h kernel/serial.h kernel/shell.h | $(BUILD)
 	$(CC) $(CFLAGS) -c kernel/kernel.c -o $(BUILD)/kernel.o
 
 $(BUILD)/panic.o: kernel/panic.c kernel/panic.h kernel/serial.h | $(BUILD)
@@ -56,8 +61,11 @@ $(BUILD)/idt.o: kernel/idt.c kernel/idt.h kernel/serial.h | $(BUILD)
 $(BUILD)/heap.o: kernel/heap.c kernel/heap.h kernel/panic.h kernel/serial.h | $(BUILD)
 	$(CC) $(CFLAGS) -c kernel/heap.c -o $(BUILD)/heap.o
 
-$(BUILD)/kernel.elf: $(BUILD)/boot.o $(BUILD)/isr.o $(BUILD)/kernel.o $(BUILD)/panic.o $(BUILD)/serial.o $(BUILD)/idt.o $(BUILD)/heap.o linker.ld
-	$(LD) $(LDFLAGS) $(BUILD)/boot.o $(BUILD)/isr.o $(BUILD)/kernel.o $(BUILD)/panic.o $(BUILD)/serial.o $(BUILD)/idt.o $(BUILD)/heap.o -o $(BUILD)/kernel.elf
+$(BUILD)/shell.o: kernel/shell.c kernel/shell.h kernel/heap.h kernel/idt.h kernel/serial.h | $(BUILD)
+	$(CC) $(CFLAGS) -c kernel/shell.c -o $(BUILD)/shell.o
+
+$(BUILD)/kernel.elf: $(BUILD)/boot.o $(BUILD)/isr.o $(BUILD)/kernel.o $(BUILD)/panic.o $(BUILD)/serial.o $(BUILD)/idt.o $(BUILD)/heap.o $(BUILD)/shell.o linker.ld
+	$(LD) $(LDFLAGS) $(BUILD)/boot.o $(BUILD)/isr.o $(BUILD)/kernel.o $(BUILD)/panic.o $(BUILD)/serial.o $(BUILD)/idt.o $(BUILD)/heap.o $(BUILD)/shell.o -o $(BUILD)/kernel.elf
 
 $(BUILD)/os.iso: $(BUILD)/kernel.elf boot/grub/grub.cfg
 	rm -rf $(ISO_DIR)
@@ -67,6 +75,6 @@ $(BUILD)/os.iso: $(BUILD)/kernel.elf boot/grub/grub.cfg
 	grub-mkrescue -o $(BUILD)/os.iso $(ISO_DIR) >/dev/null 2>&1
 
 clean:
-	rm -rf $(BUILD) log.txt panic_log.txt idt_log.txt timer_log.txt heap_log.txt
+	rm -rf $(BUILD) log.txt panic_log.txt idt_log.txt timer_log.txt heap_log.txt shell_log.txt
 
 .PHONY: all clean
