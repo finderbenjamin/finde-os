@@ -1,11 +1,14 @@
 #!/bin/bash
-set -e
+set -euo pipefail
 
+make clean
 make
 
-timeout 10 qemu-system-x86_64 \
+timeout 10s qemu-system-x86_64 \
   -cdrom build/os.iso \
   -serial stdio \
-  -display none | tee log.txt
+  -display none \
+  -no-reboot \
+  -no-shutdown | tee log.txt
 
 grep -q "BOOT_OK" log.txt
