@@ -51,8 +51,8 @@ if ! tr -d '\r' < idt_log.txt | grep -Fxq "IDT_OK"; then
   exit 1
 fi
 
-if ! tr -d '\r' < idt_log.txt | grep -Fxq "EXC:3"; then
-  echo "Expected serial marker EXC:3 not found" >&2
+if ! tr -d '\r' < idt_log.txt | grep -Fxq "EXC:4"; then
+  echo "Expected serial marker EXC:4 not found" >&2
   exit 1
 fi
 
