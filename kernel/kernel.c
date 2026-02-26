@@ -5,6 +5,7 @@
 #include "idt.h"
 #include "panic.h"
 #include "serial.h"
+#include "shell.h"
 
 extern void isr_4(void);
 
@@ -20,14 +21,22 @@ static void heap_test(void) {
     if (blocks[i] == (void*)0) {
       panic("HEAP_TEST OOM");
     }
-
-
   }
-
 }
 #endif
 
 void kernel_main(void) {
+#ifdef SHELL_TEST
+  serial_init();
+  heap_init();
+  shell_init_minimal();
+  serial_write("SHELL_OK\n");
+  __asm__ volatile ("cli");
+  for (;;) {
+    __asm__ volatile ("hlt");
+  }
+#endif
+
 #ifdef HEAP_TEST
   __asm__ volatile ("cli");
   heap_test();
@@ -57,9 +66,12 @@ void kernel_main(void) {
 #endif
 
   ASSERT(1);
-  serial_write("BOOT_OK\n");
+  heap_init();
+  shell_init();
+  __asm__ volatile ("sti");
 
   for (;;) {
+    shell_step();
     __asm__ volatile ("hlt");
   }
 }
