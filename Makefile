@@ -15,6 +15,7 @@ TIMER_TEST?=0
 HEAP_TEST?=0
 SHELL_TEST?=0
 KEYBOARD_TEST?=0
+VM_TEST?=0
 
 ifeq ($(PANIC_TEST),1)
 CFLAGS += -DPANIC_TEST
@@ -40,6 +41,10 @@ ifeq ($(KEYBOARD_TEST),1)
 CFLAGS += -DKEYBOARD_TEST
 endif
 
+ifeq ($(VM_TEST),1)
+CFLAGS += -DVM_TEST
+endif
+
 all: $(BUILD)/finde-os.iso
 
 $(BUILD):
@@ -51,7 +56,7 @@ $(BUILD)/boot.o: boot/boot.s | $(BUILD)
 $(BUILD)/isr.o: boot/isr.s | $(BUILD)
 	$(AS) $(ASFLAGS) boot/isr.s -o $(BUILD)/isr.o
 
-$(BUILD)/kernel.o: kernel/kernel.c kernel/console.h kernel/heap.h kernel/idt.h kernel/keyboard.h kernel/panic.h kernel/serial.h kernel/shell.h kernel/vga.h | $(BUILD)
+$(BUILD)/kernel.o: kernel/kernel.c kernel/console.h kernel/heap.h kernel/idt.h kernel/keyboard.h kernel/multiboot1.h kernel/multiboot2.h kernel/paging.h kernel/panic.h kernel/pmm.h kernel/serial.h kernel/shell.h kernel/vga.h | $(BUILD)
 	$(CC) $(CFLAGS) -c kernel/kernel.c -o $(BUILD)/kernel.o
 
 $(BUILD)/panic.o: kernel/panic.c kernel/panic.h kernel/serial.h | $(BUILD)
@@ -78,8 +83,14 @@ $(BUILD)/console.o: kernel/console.c kernel/console.h kernel/keyboard.h kernel/s
 $(BUILD)/keyboard.o: kernel/keyboard.c kernel/keyboard.h | $(BUILD)
 	$(CC) $(CFLAGS) -c kernel/keyboard.c -o $(BUILD)/keyboard.o
 
-$(BUILD)/kernel.elf: $(BUILD)/boot.o $(BUILD)/isr.o $(BUILD)/kernel.o $(BUILD)/panic.o $(BUILD)/serial.o $(BUILD)/idt.o $(BUILD)/heap.o $(BUILD)/shell.o $(BUILD)/vga.o $(BUILD)/console.o $(BUILD)/keyboard.o linker.ld
-	$(LD) $(LDFLAGS) $(BUILD)/boot.o $(BUILD)/isr.o $(BUILD)/kernel.o $(BUILD)/panic.o $(BUILD)/serial.o $(BUILD)/idt.o $(BUILD)/heap.o $(BUILD)/shell.o $(BUILD)/vga.o $(BUILD)/console.o $(BUILD)/keyboard.o -o $(BUILD)/kernel.elf
+$(BUILD)/pmm.o: kernel/pmm.c kernel/pmm.h kernel/multiboot1.h kernel/multiboot2.h | $(BUILD)
+	$(CC) $(CFLAGS) -c kernel/pmm.c -o $(BUILD)/pmm.o
+
+$(BUILD)/paging.o: kernel/paging.c kernel/paging.h | $(BUILD)
+	$(CC) $(CFLAGS) -c kernel/paging.c -o $(BUILD)/paging.o
+
+$(BUILD)/kernel.elf: $(BUILD)/boot.o $(BUILD)/isr.o $(BUILD)/kernel.o $(BUILD)/panic.o $(BUILD)/serial.o $(BUILD)/idt.o $(BUILD)/heap.o $(BUILD)/shell.o $(BUILD)/vga.o $(BUILD)/console.o $(BUILD)/keyboard.o $(BUILD)/pmm.o $(BUILD)/paging.o linker.ld
+	$(LD) $(LDFLAGS) $(BUILD)/boot.o $(BUILD)/isr.o $(BUILD)/kernel.o $(BUILD)/panic.o $(BUILD)/serial.o $(BUILD)/idt.o $(BUILD)/heap.o $(BUILD)/shell.o $(BUILD)/vga.o $(BUILD)/console.o $(BUILD)/keyboard.o $(BUILD)/pmm.o $(BUILD)/paging.o -o $(BUILD)/kernel.elf
 
 $(BUILD)/finde-os.iso: $(BUILD)/kernel.elf boot/grub/grub.cfg
 	rm -rf $(ISO_DIR)
@@ -89,6 +100,6 @@ $(BUILD)/finde-os.iso: $(BUILD)/kernel.elf boot/grub/grub.cfg
 	grub-mkrescue -o $(BUILD)/finde-os.iso $(ISO_DIR) >/dev/null 2>&1
 
 clean:
-	rm -rf $(BUILD) log.txt panic_log.txt idt_log.txt timer_log.txt heap_log.txt shell_log.txt keyboard_log.txt
+	rm -rf $(BUILD) log.txt panic_log.txt idt_log.txt timer_log.txt heap_log.txt shell_log.txt keyboard_log.txt vm_log.txt
 
 .PHONY: all clean
