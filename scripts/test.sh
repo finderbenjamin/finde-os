@@ -21,7 +21,7 @@ run_qemu() {
   fi
 }
 
-echo "[1/4] normal boot check"
+echo "[1/5] normal boot check"
 make clean
 make
 run_qemu log.txt
@@ -31,7 +31,7 @@ if ! tr -d '\r' < log.txt | grep -Fxq "BOOT_OK"; then
   exit 1
 fi
 
-echo "[2/4] panic path check"
+echo "[2/5] panic path check"
 make clean
 make PANIC_TEST=1
 run_qemu panic_log.txt
@@ -41,7 +41,7 @@ if ! tr -d '\r' < panic_log.txt | grep -Fq "PANIC:"; then
   exit 1
 fi
 
-echo "[3/4] idt exception check"
+echo "[3/5] idt exception check"
 make clean
 make IDT_TEST=1
 run_qemu idt_log.txt
@@ -56,13 +56,23 @@ if ! tr -d '\r' < idt_log.txt | grep -Fxq "EXC:3"; then
   exit 1
 fi
 
-echo "[4/4] timer interrupt check"
+echo "[4/5] timer interrupt check"
 make clean
 make TIMER_TEST=1
 run_qemu timer_log.txt
 
 if ! tr -d '\r' < timer_log.txt | grep -Fxq "TICK_OK"; then
   echo "Expected serial marker TICK_OK not found" >&2
+  exit 1
+fi
+
+echo "[5/5] heap allocator check"
+make clean
+make HEAP_TEST=1
+run_qemu heap_log.txt
+
+if ! tr -d '\r' < heap_log.txt | grep -Fxq "HEAP_OK"; then
+  echo "Expected serial marker HEAP_OK not found" >&2
   exit 1
 fi
 
