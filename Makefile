@@ -35,7 +35,7 @@ ifeq ($(SHELL_TEST),1)
 CFLAGS += -DSHELL_TEST
 endif
 
-all: $(BUILD)/os.iso
+all: $(BUILD)/finde-os.iso
 
 $(BUILD):
 	mkdir -p $(BUILD)
@@ -46,7 +46,7 @@ $(BUILD)/boot.o: boot/boot.s | $(BUILD)
 $(BUILD)/isr.o: boot/isr.s | $(BUILD)
 	$(AS) $(ASFLAGS) boot/isr.s -o $(BUILD)/isr.o
 
-$(BUILD)/kernel.o: kernel/kernel.c kernel/heap.h kernel/idt.h kernel/panic.h kernel/serial.h kernel/shell.h | $(BUILD)
+$(BUILD)/kernel.o: kernel/kernel.c kernel/heap.h kernel/idt.h kernel/panic.h kernel/serial.h kernel/shell.h kernel/vga.h | $(BUILD)
 	$(CC) $(CFLAGS) -c kernel/kernel.c -o $(BUILD)/kernel.o
 
 $(BUILD)/panic.o: kernel/panic.c kernel/panic.h kernel/serial.h | $(BUILD)
@@ -64,15 +64,18 @@ $(BUILD)/heap.o: kernel/heap.c kernel/heap.h kernel/panic.h kernel/serial.h | $(
 $(BUILD)/shell.o: kernel/shell.c kernel/shell.h kernel/heap.h kernel/idt.h kernel/serial.h | $(BUILD)
 	$(CC) $(CFLAGS) -c kernel/shell.c -o $(BUILD)/shell.o
 
-$(BUILD)/kernel.elf: $(BUILD)/boot.o $(BUILD)/isr.o $(BUILD)/kernel.o $(BUILD)/panic.o $(BUILD)/serial.o $(BUILD)/idt.o $(BUILD)/heap.o $(BUILD)/shell.o linker.ld
-	$(LD) $(LDFLAGS) $(BUILD)/boot.o $(BUILD)/isr.o $(BUILD)/kernel.o $(BUILD)/panic.o $(BUILD)/serial.o $(BUILD)/idt.o $(BUILD)/heap.o $(BUILD)/shell.o -o $(BUILD)/kernel.elf
+$(BUILD)/vga.o: kernel/vga.c kernel/vga.h | $(BUILD)
+	$(CC) $(CFLAGS) -c kernel/vga.c -o $(BUILD)/vga.o
 
-$(BUILD)/os.iso: $(BUILD)/kernel.elf boot/grub/grub.cfg
+$(BUILD)/kernel.elf: $(BUILD)/boot.o $(BUILD)/isr.o $(BUILD)/kernel.o $(BUILD)/panic.o $(BUILD)/serial.o $(BUILD)/idt.o $(BUILD)/heap.o $(BUILD)/shell.o $(BUILD)/vga.o linker.ld
+	$(LD) $(LDFLAGS) $(BUILD)/boot.o $(BUILD)/isr.o $(BUILD)/kernel.o $(BUILD)/panic.o $(BUILD)/serial.o $(BUILD)/idt.o $(BUILD)/heap.o $(BUILD)/shell.o $(BUILD)/vga.o -o $(BUILD)/kernel.elf
+
+$(BUILD)/finde-os.iso: $(BUILD)/kernel.elf boot/grub/grub.cfg
 	rm -rf $(ISO_DIR)
 	mkdir -p $(GRUB_DIR)
 	cp $(BUILD)/kernel.elf $(BOOT_DIR)/kernel.elf
 	cp boot/grub/grub.cfg $(GRUB_DIR)/grub.cfg
-	grub-mkrescue -o $(BUILD)/os.iso $(ISO_DIR) >/dev/null 2>&1
+	grub-mkrescue -o $(BUILD)/finde-os.iso $(ISO_DIR) >/dev/null 2>&1
 
 clean:
 	rm -rf $(BUILD) log.txt panic_log.txt idt_log.txt timer_log.txt heap_log.txt shell_log.txt
