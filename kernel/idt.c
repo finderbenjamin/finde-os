@@ -19,6 +19,15 @@ struct __attribute__((packed)) idtr {
 };
 
 static struct idt_entry idt[256];
+volatile uint64_t g_timer_ticks = 0;
+
+static inline void outb(uint16_t port, uint8_t val) {
+  __asm__ volatile ("outb %0, %1" : : "a"(val), "Nd"(port));
+}
+
+static inline void io_wait(void) {
+  outb(0x80, 0);
+}
 
 static uint16_t read_cs(void) {
   uint16_t cs;
@@ -59,6 +68,8 @@ extern void isr_28(void);
 extern void isr_29(void);
 extern void isr_30(void);
 extern void isr_31(void);
+extern void irq_0(void);
+extern void irq_ignore(void);
 
 static void set_gate(int vec, void (*handler)(void), uint8_t flags, uint16_t selector) {
   uint64_t addr = (uint64_t)handler;
@@ -87,10 +98,58 @@ void idt_init(void) {
     set_gate(i, handlers[i], interrupt_gate, selector);
   }
 
+  set_gate(0x20, irq_0, interrupt_gate, selector);
+  for (int i = 0x21; i <= 0x2F; ++i) {
+    set_gate(i, irq_ignore, interrupt_gate, selector);
+  }
+
   desc.limit = (uint16_t)(sizeof(idt) - 1);
   desc.base = (uint64_t)&idt[0];
 
   __asm__ volatile ("lidt %0" : : "m"(desc));
 
   serial_write("IDT_OK\n");
+}
+
+static void pic_remap(void) {
+  const uint8_t icw1_init_icw4 = 0x11;
+  const uint8_t icw4_8086 = 0x01;
+
+  outb(0x20, icw1_init_icw4);
+  io_wait();
+  outb(0xA0, icw1_init_icw4);
+  io_wait();
+  outb(0x21, 0x20);
+  io_wait();
+  outb(0xA1, 0x28);
+  io_wait();
+  outb(0x21, 0x04);
+  io_wait();
+  outb(0xA1, 0x02);
+  io_wait();
+  outb(0x21, icw4_8086);
+  io_wait();
+  outb(0xA1, icw4_8086);
+  io_wait();
+
+  outb(0x21, 0xFE);
+  io_wait();
+  outb(0xA1, 0xFF);
+  io_wait();
+}
+
+static void pit_init(void) {
+  const uint16_t reload = 1193;
+
+  outb(0x43, 0x36);
+  io_wait();
+  outb(0x40, (uint8_t)(reload & 0xFF));
+  io_wait();
+  outb(0x40, (uint8_t)((reload >> 8) & 0xFF));
+  io_wait();
+}
+
+void interrupts_init(void) {
+  pic_remap();
+  pit_init();
 }

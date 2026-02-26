@@ -6,6 +6,7 @@ extern void isr_4(void);
 
 void kernel_main(void) {
   idt_init();
+  interrupts_init();
 
 #ifdef IDT_TEST
   isr_4();
@@ -13,6 +14,14 @@ void kernel_main(void) {
 
 #ifdef PANIC_TEST
   panic("TEST");
+#endif
+
+#ifdef TIMER_TEST
+  serial_write("TICK_OK\n");
+  __asm__ volatile ("cli");
+  for (;;) {
+    __asm__ volatile ("hlt");
+  }
 #endif
 
   ASSERT(1);

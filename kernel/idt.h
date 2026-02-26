@@ -2,5 +2,6 @@
 #define IDT_H
 
 void idt_init(void);
+void interrupts_init(void);
 
 #endif
