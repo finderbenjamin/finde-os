@@ -16,6 +16,8 @@ isr_\n:
 .section .text
 .code64
 
+.extern g_timer_ticks
+
 .set COM1, 0x3F8
 
 serial_write_al:
@@ -68,6 +70,31 @@ isr_common:
 3:
   hlt
   jmp 3b
+
+.global irq_0
+irq_0:
+  pushq %rax
+  pushq %rdx
+  incq g_timer_ticks(%rip)
+  movb $0x20, %al
+  movw $0x20, %dx
+  outb %al, %dx
+  popq %rdx
+  popq %rax
+  iretq
+
+.global irq_ignore
+irq_ignore:
+  pushq %rax
+  pushq %rdx
+  movb $0x20, %al
+  movw $0xA0, %dx
+  outb %al, %dx
+  movw $0x20, %dx
+  outb %al, %dx
+  popq %rdx
+  popq %rax
+  iretq
 
 ISR_NOERR 0
 ISR_NOERR 1

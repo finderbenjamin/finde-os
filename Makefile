@@ -11,6 +11,7 @@ BOOT_DIR=$(ISO_DIR)/boot
 GRUB_DIR=$(BOOT_DIR)/grub
 PANIC_TEST?=0
 IDT_TEST?=0
+TIMER_TEST?=0
 
 ifeq ($(PANIC_TEST),1)
 CFLAGS += -DPANIC_TEST
@@ -18,6 +19,10 @@ endif
 
 ifeq ($(IDT_TEST),1)
 CFLAGS += -DIDT_TEST
+endif
+
+ifeq ($(TIMER_TEST),1)
+CFLAGS += -DTIMER_TEST
 endif
 
 all: $(BUILD)/os.iso
@@ -54,6 +59,6 @@ $(BUILD)/os.iso: $(BUILD)/kernel.elf boot/grub/grub.cfg
 	grub-mkrescue -o $(BUILD)/os.iso $(ISO_DIR) >/dev/null 2>&1
 
 clean:
-	rm -rf $(BUILD) log.txt panic_log.txt idt_log.txt
+	rm -rf $(BUILD) log.txt panic_log.txt idt_log.txt timer_log.txt
 
 .PHONY: all clean
