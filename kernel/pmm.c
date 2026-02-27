@@ -21,6 +21,14 @@ static inline int bitmap_test(uint64_t frame_index) {
   return (frame_bitmap[frame_index / 64u] & (1ull << (frame_index % 64u))) != 0;
 }
 
+static uint64_t pmm_align_down(uint64_t value) {
+  return value & ~(uint64_t)(PMM_FRAME_SIZE - 1u);
+}
+
+static uint64_t pmm_align_up(uint64_t value) {
+  return (value + PMM_FRAME_SIZE - 1u) & ~(uint64_t)(PMM_FRAME_SIZE - 1u);
+}
+
 static void pmm_mark_usable_range(uint64_t start, uint64_t end) {
   if (end > (uint64_t)PMM_MAX_FRAMES * PMM_FRAME_SIZE) {
     end = (uint64_t)PMM_MAX_FRAMES * PMM_FRAME_SIZE;
@@ -51,12 +59,32 @@ void pmm_init(const multiboot2_info_t* mb_info) {
   }
 
   if (mb_info != (const multiboot2_info_t*)0) {
+    const uint8_t* info_end = (const uint8_t*)mb_info + mb_info->total_size;
     const multiboot2_tag_t* tag = multiboot2_first_tag(mb_info);
-    while (tag->type != MULTIBOOT2_TAG_TYPE_END) {
+
+    size_t tag_count = 0;
+    while ((const uint8_t*)tag + sizeof(multiboot2_tag_t) <= info_end && tag_count < 256u) {
+      if (tag->type == MULTIBOOT2_TAG_TYPE_END) {
+        break;
+      }
+
+      if (tag->size < sizeof(multiboot2_tag_t)) {
+        break;
+      }
+
       if (tag->type == MULTIBOOT2_TAG_TYPE_MMAP) {
         const multiboot2_tag_mmap_t* mmap_tag = (const multiboot2_tag_mmap_t*)tag;
         const uint8_t* entries_end = (const uint8_t*)mmap_tag + mmap_tag->size;
         const uint8_t* entry_ptr = (const uint8_t*)mmap_tag + sizeof(multiboot2_tag_mmap_t);
+
+        if (mmap_tag->entry_size < sizeof(multiboot2_mmap_entry_t)) {
+          tag = multiboot2_next_tag(tag);
+          continue;
+        }
+
+        if (entries_end > info_end) {
+          entries_end = info_end;
+        }
 
         while (entry_ptr + mmap_tag->entry_size <= entries_end) {
           const multiboot2_mmap_entry_t* entry = (const multiboot2_mmap_entry_t*)entry_ptr;
@@ -69,7 +97,13 @@ void pmm_init(const multiboot2_info_t* mb_info) {
         }
       }
 
-      tag = multiboot2_next_tag(tag);
+      const multiboot2_tag_t* next_tag = multiboot2_next_tag(tag);
+      if ((const uint8_t*)next_tag <= (const uint8_t*)tag) {
+        break;
+      }
+
+      tag = next_tag;
+      ++tag_count;
     }
   } else {
     pmm_mark_usable_range(0x100000ull, 0x4000000ull);
@@ -97,6 +131,30 @@ void pmm_init_multiboot1(const multiboot1_info_t* mb1_info) {
   }
 
   pmm_reserve_low_memory();
+}
+
+void pmm_reserve_range(uint64_t start, uint64_t end) {
+  const uint64_t max_addr = (uint64_t)PMM_MAX_FRAMES * PMM_FRAME_SIZE;
+
+  if (start >= max_addr) {
+    return;
+  }
+
+  if (end > max_addr) {
+    end = max_addr;
+  }
+
+  if (start >= end) {
+    return;
+  }
+
+  uint64_t frame = pmm_align_down(start) / PMM_FRAME_SIZE;
+  const uint64_t frame_end = pmm_align_up(end) / PMM_FRAME_SIZE;
+
+  while (frame < frame_end) {
+    bitmap_set(frame);
+    ++frame;
+  }
 }
 
 uint64_t pmm_alloc_frame(void) {

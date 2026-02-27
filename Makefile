@@ -17,6 +17,7 @@ SHELL_TEST?=0
 KEYBOARD_TEST?=0
 VM_TEST?=0
 BOOT_TEST?=0
+PMM_TEST?=0
 
 ifeq ($(PANIC_TEST),1)
 CFLAGS += -DPANIC_TEST
@@ -48,6 +49,10 @@ endif
 
 ifeq ($(BOOT_TEST),1)
 CFLAGS += -DBOOT_TEST
+endif
+
+ifeq ($(PMM_TEST),1)
+CFLAGS += -DPMM_TEST
 endif
 
 all: $(BUILD)/finde-os.iso
@@ -105,6 +110,6 @@ $(BUILD)/finde-os.iso: $(BUILD)/kernel.elf boot/grub/grub.cfg
 	grub-mkrescue -o $(BUILD)/finde-os.iso $(ISO_DIR) >/dev/null
 
 clean:
-	rm -rf $(BUILD) log.txt boot_log.txt panic_log.txt idt_log.txt timer_log.txt heap_log.txt shell_log.txt keyboard_log.txt vm_log.txt
+	rm -rf $(BUILD) log.txt boot_log.txt panic_log.txt idt_log.txt timer_log.txt heap_log.txt shell_log.txt keyboard_log.txt vm_log.txt pmm_log.txt
 
 .PHONY: all clean
