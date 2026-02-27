@@ -80,6 +80,26 @@ static __attribute__((noreturn)) void nx_test_fail(void) {
 }
 #endif
 
+#ifdef EDIT_TEST
+static int edit_line_equals(const char* a, const char* b) {
+  while (*a != '\0' && *b != '\0') {
+    if (*a != *b) {
+      return 0;
+    }
+    ++a;
+    ++b;
+  }
+  return *a == '\0' && *b == '\0';
+}
+
+static __attribute__((noreturn)) void edit_test_halt(void) {
+  __asm__ volatile ("cli");
+  for (;;) {
+    __asm__ volatile ("hlt");
+  }
+}
+#endif
+
 #ifdef HEAP_TEST
 static void heap_test(void) {
   static const size_t sizes[] = {1, 7, 16, 31, 64, 129, 1024, 4096};
@@ -267,6 +287,25 @@ void kernel_main(uint64_t mb_magic, uint64_t mb_info_addr) {
   for (;;) {
     __asm__ volatile ("hlt");
   }
+#endif
+
+#ifdef EDIT_TEST
+  serial_init();
+  shell_init_minimal();
+
+  shell_process_input_char_for_test('a');
+  shell_process_input_char_for_test('b');
+  shell_process_input_char_for_test('c');
+  shell_process_input_char_for_test('\b');
+
+  serial_write("\n");
+  if (shell_cursor_for_test() == 2 &&
+      edit_line_equals(shell_current_line_for_test(), "ab")) {
+    serial_write("EDIT_OK\n");
+  } else {
+    serial_write("EDIT_FAIL\n");
+  }
+  edit_test_halt();
 #endif
 
 #ifdef SHELL_TEST

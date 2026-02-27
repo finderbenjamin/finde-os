@@ -7,10 +7,10 @@
 #include "heap.h"
 #include "idt.h"
 
-#define SHELL_MAX_LINE 80
+#define SHELL_MAX_LINE 128
 
 static char g_line[SHELL_MAX_LINE + 1];
-static size_t g_line_len = 0;
+static size_t g_cursor = 0;
 
 static void write_u64(uint64_t value) {
   char buf[21];
@@ -83,12 +83,12 @@ static void shell_execute_line(void) {
   char command[SHELL_MAX_LINE + 1];
   size_t i = 0;
 
-  while (i < g_line_len && g_line[i] == ' ') {
+  while (i < g_cursor && g_line[i] == ' ') {
     ++i;
   }
 
   size_t j = 0;
-  while (i < g_line_len && g_line[i] != ' ' && j < SHELL_MAX_LINE) {
+  while (i < g_cursor && g_line[i] != ' ' && j < SHELL_MAX_LINE) {
     command[j++] = g_line[i++];
   }
   command[j] = '\0';
@@ -109,7 +109,7 @@ static void shell_execute_line(void) {
 }
 
 void shell_init_minimal(void) {
-  g_line_len = 0;
+  g_cursor = 0;
 }
 
 void shell_init(void) {
@@ -118,34 +118,47 @@ void shell_init(void) {
   shell_prompt();
 }
 
-void shell_step(void) {
-  if (!console_has_char()) {
-    return;
-  }
-
-  char c = console_read_char();
-
+void shell_process_input_char_for_test(char c) {
   if (c == '\r' || c == '\n') {
     console_write("\n");
-    g_line[g_line_len] = '\0';
+    g_line[g_cursor] = '\0';
     shell_execute_line();
-    g_line_len = 0;
+    g_cursor = 0;
     shell_prompt();
     return;
   }
 
   if (c == 0x7F || c == '\b') {
-    if (g_line_len > 0) {
-      --g_line_len;
+    if (g_cursor > 0) {
+      --g_cursor;
+      g_line[g_cursor] = '\0';
       console_write("\b \b");
     }
     return;
   }
 
   if (c >= 32 && c <= 126) {
-    if (g_line_len < SHELL_MAX_LINE) {
-      g_line[g_line_len++] = c;
+    if (g_cursor < SHELL_MAX_LINE) {
+      g_line[g_cursor++] = c;
+      g_line[g_cursor] = '\0';
       console_write_char(c);
     }
   }
+}
+
+const char* shell_current_line_for_test(void) {
+  g_line[g_cursor] = '\0';
+  return g_line;
+}
+
+size_t shell_cursor_for_test(void) {
+  return g_cursor;
+}
+
+void shell_step(void) {
+  if (!console_has_char()) {
+    return;
+  }
+
+  shell_process_input_char_for_test(console_read_char());
 }

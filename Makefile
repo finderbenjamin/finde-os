@@ -22,6 +22,7 @@ VMM_TEST?=0
 PF_TEST?=0
 NX_TEST?=0
 VGA_TEST?=0
+EDIT_TEST?=0
 
 ifeq ($(PANIC_TEST),1)
 CFLAGS += -DPANIC_TEST
@@ -74,6 +75,10 @@ endif
 
 ifeq ($(VGA_TEST),1)
 CFLAGS += -DVGA_TEST
+endif
+
+ifeq ($(EDIT_TEST),1)
+CFLAGS += -DEDIT_TEST
 endif
 
 all: $(BUILD)/finde-os.iso
@@ -131,6 +136,6 @@ $(BUILD)/finde-os.iso: $(BUILD)/kernel.elf boot/grub/grub.cfg
 	grub-mkrescue -o $(BUILD)/finde-os.iso $(ISO_DIR) >/dev/null
 
 clean:
-	rm -rf $(BUILD) log.txt boot_log.txt panic_log.txt idt_log.txt timer_log.txt heap_log.txt shell_log.txt keyboard_log.txt vm_log.txt pmm_log.txt vmm_log.txt pf_log.txt nx_log.txt vga_log.txt
+	rm -rf $(BUILD) log.txt boot_log.txt panic_log.txt idt_log.txt timer_log.txt heap_log.txt shell_log.txt keyboard_log.txt vm_log.txt pmm_log.txt vmm_log.txt pf_log.txt nx_log.txt vga_log.txt edit_log.txt
 
 .PHONY: all clean
