@@ -18,7 +18,9 @@ extern void isr_4(void);
 extern uint8_t _kernel_start;
 extern uint8_t _kernel_end;
 
-#if defined(PMM_TEST) || defined(VMM_TEST)
+volatile uint8_t g_nx_expect = 0;
+
+#if defined(PMM_TEST) || defined(VMM_TEST) || defined(NX_TEST)
 static uint64_t align_down_4k(uint64_t value) {
   return value & ~0xFFFull;
 }
@@ -44,6 +46,7 @@ static __attribute__((noreturn)) void pmm_test_halt_success(void) {
 #endif
 
 
+
 #ifdef PF_TEST
 static __attribute__((noreturn)) void pf_test_fail(void) {
   serial_write("PF_FAIL\n");
@@ -59,6 +62,17 @@ static __attribute__((noreturn)) void vmm_test_fail(void) {
 
 static __attribute__((noreturn)) void vmm_test_halt_success(void) {
   serial_write("VMM_OK\n");
+  __asm__ volatile ("cli");
+  for (;;) {
+    __asm__ volatile ("hlt");
+  }
+}
+#endif
+
+
+#ifdef NX_TEST
+static __attribute__((noreturn)) void nx_test_fail(void) {
+  serial_write("NX_FAIL\n");
   __asm__ volatile ("cli");
   for (;;) {
     __asm__ volatile ("hlt");
@@ -156,6 +170,57 @@ void kernel_main(uint64_t mb_magic, uint64_t mb_info_addr) {
 #endif
 
 
+#ifdef NX_TEST
+  serial_init();
+  if ((uint32_t)mb_magic != MULTIBOOT2_BOOTLOADER_MAGIC) {
+    nx_test_fail();
+  }
+
+  idt_init();
+  interrupts_init();
+
+  uint64_t efer_low;
+  uint64_t efer_high;
+  __asm__ volatile ("rdmsr" : "=a"(efer_low), "=d"(efer_high) : "c"(0xC0000080));
+  uint64_t efer = (efer_high << 32) | efer_low;
+  efer |= (1ull << 11);
+  __asm__ volatile ("wrmsr" : : "c"(0xC0000080), "a"((uint32_t)efer), "d"((uint32_t)(efer >> 32)) : "memory");
+
+  const uint64_t mb_info_phys = (uint64_t)(uint32_t)mb_info_addr;
+  pmm_reserve_range(0, 0x2000000ull);
+
+  const uint64_t kernel_start = align_down_4k((uint64_t)(uintptr_t)&_kernel_start);
+  const uint64_t kernel_end = align_up_4k((uint64_t)(uintptr_t)&_kernel_end);
+  pmm_reserve_range(kernel_start, kernel_end);
+
+  const uint64_t mb_start = align_down_4k(mb_info_phys);
+  const uint64_t mb_end = align_up_4k(mb_info_phys + 4096ull);
+  pmm_reserve_range(mb_start, mb_end);
+
+  const uint64_t code_page = pmm_alloc_page();
+  if (code_page == 0) {
+    nx_test_fail();
+  }
+
+  uint8_t* code_ptr = (uint8_t*)(uintptr_t)code_page;
+  code_ptr[0] = 0xC3;
+  code_ptr[1] = 0x90;
+  code_ptr[2] = 0x90;
+  code_ptr[3] = 0x90;
+
+  const uint64_t test_virt = 0x0000000100000000ull;
+  if (vmm_map_page(test_virt, code_page, VMM_PAGE_PRESENT | VMM_PAGE_WRITABLE | VMM_PAGE_NO_EXECUTE) != 0) {
+    nx_test_fail();
+  }
+
+  g_nx_expect = 1;
+  const uint64_t nx_target = test_virt;
+  __asm__ volatile ("mov %0, %%rax; call *%%rax" : : "r"(nx_target) : "rax", "memory");
+
+  nx_test_fail();
+#endif
+
+
 #ifdef PF_TEST
   serial_init();
   if ((uint32_t)mb_magic != MULTIBOOT2_BOOTLOADER_MAGIC) {
@@ -202,7 +267,6 @@ void kernel_main(uint64_t mb_magic, uint64_t mb_info_addr) {
     __asm__ volatile ("hlt");
   }
 #endif
-
 #ifdef HEAP_TEST
   __asm__ volatile ("cli");
   heap_test();

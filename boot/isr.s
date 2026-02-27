@@ -18,6 +18,7 @@ isr_\n:
 
 .extern g_timer_ticks
 .extern keyboard_handle_scancode
+.extern g_nx_expect
 
 .set COM1, 0x3F8
 
@@ -95,9 +96,25 @@ isr_common:
   movb $'\n', %al
   call serial_write_al
 
-3:
+  cmpq $6, %rbx
+  jne 4f
+
+  movb $'N', %al
+  call serial_write_al
+  movb $'X', %al
+  call serial_write_al
+  movb $'_', %al
+  call serial_write_al
+  movb $'O', %al
+  call serial_write_al
+  movb $'K', %al
+  call serial_write_al
+  movb $'\n', %al
+  call serial_write_al
+
+4:
   hlt
-  jmp 3b
+  jmp 4b
 
 .global irq_0
 irq_0:
@@ -202,6 +219,25 @@ isr_14:
   movb $'\n', %al
   call serial_write_al
 
+  movq (%rsp), %rax
+  testq $0x10, %rax
+  jz 1f
+
+  movb $'N', %al
+  call serial_write_al
+  movb $'X', %al
+  call serial_write_al
+  movb $'_', %al
+  call serial_write_al
+  movb $'O', %al
+  call serial_write_al
+  movb $'K', %al
+  call serial_write_al
+  movb $'\n', %al
+  call serial_write_al
+  jmp 2f
+
+1:
   movb $'P', %al
   call serial_write_al
   movb $'F', %al
@@ -215,9 +251,10 @@ isr_14:
   movb $'\n', %al
   call serial_write_al
 
-1:
+2:
+4:
   hlt
-  jmp 1b
+  jmp 4b
 
 ISR_NOERR 15
 ISR_NOERR 16
