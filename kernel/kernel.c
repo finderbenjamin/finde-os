@@ -18,6 +18,29 @@ extern void isr_4(void);
 extern uint8_t _kernel_start;
 extern uint8_t _kernel_end;
 
+#ifdef PMM_TEST
+static uint64_t align_down_4k(uint64_t value) {
+  return value & ~0xFFFull;
+}
+
+static uint64_t align_up_4k(uint64_t value) {
+  return (value + 0xFFFull) & ~0xFFFull;
+}
+
+static __attribute__((noreturn)) void pmm_test_fail(void) {
+  serial_write("PMM_FAIL\n");
+  panic("PMM_TEST");
+}
+
+static __attribute__((noreturn)) void pmm_test_halt_success(void) {
+  serial_write("PMM_OK\n");
+  __asm__ volatile ("cli");
+  for (;;) {
+    __asm__ volatile ("hlt");
+  }
+}
+#endif
+
 #ifdef HEAP_TEST
 static void heap_test(void) {
   static const size_t sizes[] = {1, 7, 16, 31, 64, 129, 1024, 4096};
@@ -57,6 +80,21 @@ static void keyboard_test(void) {
 void kernel_main(uint64_t mb_magic, uint64_t mb_info_addr) {
   (void)mb_magic;
   (void)mb_info_addr;
+
+#ifdef PMM_TEST
+  serial_init();
+
+  if ((uint32_t)mb_magic != MULTIBOOT2_BOOTLOADER_MAGIC) {
+    pmm_test_fail();
+  }
+
+  serial_write("PMM_OK\n");
+  __asm__ volatile ("cli");
+  for (;;) {
+    __asm__ volatile ("hlt");
+  }
+#endif
+
 #ifdef BOOT_TEST
   __asm__ volatile ("cli");
   serial_init();

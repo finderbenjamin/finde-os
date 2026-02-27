@@ -49,8 +49,8 @@ pdpt_table:
   .skip 4096
 
 .align 4096
-pd_table:
-  .skip 4096
+pd_tables:
+  .skip 16384
 
 .align 8
 mb_magic64:
@@ -94,13 +94,29 @@ _start:
   movl %eax, pml4_table
   movl $0, pml4_table + 4
 
-  movl $pd_table, %eax
+  xorl %ecx, %ecx
+map_pdpt_entries:
+  movl $pd_tables, %eax
+  movl %ecx, %edx
+  shll $12, %edx
+  addl %edx, %eax
   orl $0x3, %eax
-  movl %eax, pdpt_table
-  movl $0, pdpt_table + 4
+  movl %eax, pdpt_table(,%ecx,8)
+  movl $0, pdpt_table + 4(,%ecx,8)
+  incl %ecx
+  cmpl $4, %ecx
+  jne map_pdpt_entries
 
-  movl $0x00000083, pd_table
-  movl $0x00000000, pd_table + 4
+  xorl %ecx, %ecx
+map_pd_entries:
+  movl %ecx, %eax
+  shll $21, %eax
+  orl $0x83, %eax
+  movl %eax, pd_tables(,%ecx,8)
+  movl $0, pd_tables + 4(,%ecx,8)
+  incl %ecx
+  cmpl $2048, %ecx
+  jne map_pd_entries
 
   movl %cr4, %eax
   orl $CR4_PAE, %eax
