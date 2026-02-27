@@ -11,6 +11,8 @@
 #define PAGE_PRESENT (1ull << 0)
 #define PAGE_WRITABLE (1ull << 1)
 #define PAGE_FLAGS (PAGE_PRESENT | PAGE_WRITABLE)
+#define PAGE_NO_EXECUTE (1ull << 63)
+#define PAGE_LEAF_FLAG_MASK (0xFFFull | PAGE_NO_EXECUTE)
 
 static uint64_t pml4[PAGE_ENTRIES] __attribute__((aligned(PAGE_SIZE)));
 static uint64_t pdpt_low[PAGE_ENTRIES] __attribute__((aligned(PAGE_SIZE)));
@@ -73,6 +75,7 @@ void paging_init(uint64_t kernel_start_phys, uint64_t kernel_end_phys) {
   __asm__ volatile ("rdmsr" : "=a"(efer_low), "=d"(efer_high) : "c"(0xC0000080));
   uint64_t efer = (efer_high << 32) | efer_low;
   efer |= (1ull << 8);
+  efer |= (1ull << 11);
   __asm__ volatile ("wrmsr" : : "c"(0xC0000080), "a"((uint32_t)efer), "d"((uint32_t)(efer >> 32)) : "memory");
 
   __asm__ volatile ("mov %0, %%cr3" : : "r"((uint64_t)pml4) : "memory");
@@ -149,7 +152,7 @@ int vmm_map_page(uint64_t virt_addr, uint64_t phys_addr, uint64_t flags) {
     return -1;
   }
 
-  pt[vmm_index(virt_addr, 12)] = phys_addr | (flags & 0xFFFull) | PAGE_PRESENT;
+  pt[vmm_index(virt_addr, 12)] = phys_addr | (flags & PAGE_LEAF_FLAG_MASK) | PAGE_PRESENT;
   __asm__ volatile ("invlpg (%0)" : : "r"((void*)(uintptr_t)virt_addr) : "memory");
 
   return 0;

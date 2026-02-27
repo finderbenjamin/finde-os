@@ -9,3 +9,4 @@
 9) Physical memory manager test via multiboot2 map -> "PMM_OK"
 10) VMM test -> "VMM_OK"
 11) Page fault handler with CR2 + error code decode test -> "PF_OK"
+12) NX (non-executable pages) deterministic test -> "NX_OK"
