@@ -21,7 +21,7 @@ run_qemu() {
   fi
 }
 
-echo "[1/13] normal boot check"
+echo "[1/14] normal boot check"
 make clean
 make
 run_qemu log.txt
@@ -31,7 +31,7 @@ if ! tr -d '\r' < log.txt | grep -Fq "IDT_OK"; then
   exit 1
 fi
 
-echo "[2/13] boot marker check"
+echo "[2/14] boot marker check"
 make clean
 make BOOT_TEST=1
 run_qemu boot_log.txt
@@ -41,7 +41,7 @@ if ! tr -d '\r' < boot_log.txt | grep -Fq "BOOT_OK"; then
   exit 1
 fi
 
-echo "[3/13] panic path check"
+echo "[3/14] panic path check"
 make clean
 make PANIC_TEST=1
 run_qemu panic_log.txt
@@ -51,7 +51,7 @@ if ! tr -d '\r' < panic_log.txt | grep -Fq "PANIC:"; then
   exit 1
 fi
 
-echo "[4/13] idt exception check"
+echo "[4/14] idt exception check"
 make clean
 make IDT_TEST=1
 run_qemu idt_log.txt
@@ -66,7 +66,7 @@ if ! tr -d '\r' < idt_log.txt | grep -Fq "EXC:4"; then
   exit 1
 fi
 
-echo "[5/13] timer interrupt check"
+echo "[5/14] timer interrupt check"
 make clean
 make TIMER_TEST=1
 run_qemu timer_log.txt
@@ -76,7 +76,7 @@ if ! tr -d '\r' < timer_log.txt | grep -Fq "TICK_OK"; then
   exit 1
 fi
 
-echo "[6/13] heap allocator check"
+echo "[6/14] heap allocator check"
 make clean
 make HEAP_TEST=1
 run_qemu heap_log.txt
@@ -86,7 +86,7 @@ if ! tr -d '\r' < heap_log.txt | grep -Fq "HEAP_OK"; then
   exit 1
 fi
 
-echo "[7/13] shell test check"
+echo "[7/14] shell test check"
 make clean
 make SHELL_TEST=1
 run_qemu shell_log.txt
@@ -96,7 +96,7 @@ if ! tr -d '\r' < shell_log.txt | grep -Fq "SHELL_OK"; then
   exit 1
 fi
 
-echo "[8/13] keyboard decoder check"
+echo "[8/14] keyboard decoder check"
 make clean
 make KEYBOARD_TEST=1
 run_qemu keyboard_log.txt
@@ -106,7 +106,7 @@ if ! tr -d '\r' < keyboard_log.txt | grep -Fq "KBD_OK"; then
   exit 1
 fi
 
-echo "[9/13] virtual memory stack check"
+echo "[9/14] virtual memory stack check"
 make clean
 make VM_TEST=1
 run_qemu vm_log.txt
@@ -117,7 +117,7 @@ if ! tr -d '\r' < vm_log.txt | grep -Fq "VM_OK"; then
 fi
 
 
-echo "[10/13] physical memory manager check"
+echo "[10/14] physical memory manager check"
 make clean
 make PMM_TEST=1
 run_qemu pmm_log.txt
@@ -127,7 +127,7 @@ if ! tr -d '\r' < pmm_log.txt | grep -Fq "PMM_OK"; then
   exit 1
 fi
 
-echo "[11/13] virtual memory mapping check"
+echo "[11/14] virtual memory mapping check"
 make clean
 make VMM_TEST=1
 run_qemu vmm_log.txt
@@ -137,7 +137,7 @@ if ! tr -d '\r' < vmm_log.txt | grep -Fq "VMM_OK"; then
   exit 1
 fi
 
-echo "[12/13] page fault handler check"
+echo "[12/14] page fault handler check"
 make clean
 make PF_TEST=1
 run_qemu pf_log.txt
@@ -148,13 +148,24 @@ if ! tr -d '\r' < pf_log.txt | grep -Fxq "PF_OK"; then
 fi
 
 
-echo "[13/13] nx execute protection check"
+echo "[13/14] nx execute protection check"
 make clean
 make NX_TEST=1
 run_qemu nx_log.txt
 
 if ! tr -d '\r' < nx_log.txt | grep -Fxq "NX_OK"; then
   echo "Expected serial marker NX_OK not found" >&2
+  exit 1
+fi
+
+
+echo "[14/14] VGA console check"
+make clean
+make VGA_TEST=1
+run_qemu vga_log.txt
+
+if ! tr -d '\r' < vga_log.txt | sed -E 's/\x1B\[[0-9;]*[[:alpha:]]//g' | grep -Fxq "VGA_OK"; then
+  echo "Expected serial marker VGA_OK not found" >&2
   exit 1
 fi
 

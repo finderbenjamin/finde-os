@@ -239,6 +239,18 @@ void kernel_main(uint64_t mb_magic, uint64_t mb_info_addr) {
   }
 #endif
 
+
+#ifdef VGA_TEST
+  __asm__ volatile ("cli");
+  serial_init();
+  vga_init();
+  vga_write("VGA WORKS\n");
+  serial_write("VGA_OK\n");
+  for (;;) {
+    __asm__ volatile ("hlt");
+  }
+#endif
+
 #ifdef BOOT_TEST
   __asm__ volatile ("cli");
   serial_init();
