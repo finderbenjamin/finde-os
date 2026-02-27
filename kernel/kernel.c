@@ -1,6 +1,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "cap.h"
 #include "console.h"
 #include "heap.h"
 #include "idt.h"
@@ -139,6 +140,47 @@ static void keyboard_test(void) {
 void kernel_main(uint64_t mb_magic, uint64_t mb_info_addr) {
   (void)mb_magic;
   (void)mb_info_addr;
+
+
+#ifdef CAP_TEST
+  serial_init();
+  cap_init();
+
+  uint64_t cap_handle = cap_create(1u, CAP_R_READ | CAP_R_WRITE);
+  if (cap_handle == 0u) {
+    panic("CAP_TEST CREATE");
+  }
+
+  if (cap_check(cap_handle, 1u, CAP_R_READ) != 1) {
+    panic("CAP_TEST READ");
+  }
+
+  if (cap_check(cap_handle, 1u, CAP_R_READ | CAP_R_WRITE) != 1) {
+    panic("CAP_TEST RW");
+  }
+
+  if (cap_check(cap_handle, 1u, CAP_R_EXEC) != 0) {
+    panic("CAP_TEST EXEC");
+  }
+
+  if (cap_check(cap_handle, 2u, CAP_R_READ) != 0) {
+    panic("CAP_TEST TYPE");
+  }
+
+  if (cap_destroy(cap_handle) != 1) {
+    panic("CAP_TEST DESTROY");
+  }
+
+  if (cap_check(cap_handle, 1u, CAP_R_READ) != 0) {
+    panic("CAP_TEST STALE");
+  }
+
+  serial_write("CAP_OK\n");
+  __asm__ volatile ("cli");
+  for (;;) {
+    __asm__ volatile ("hlt");
+  }
+#endif
 
 #ifdef PMM_TEST
   serial_init();
