@@ -11,3 +11,5 @@
 11) Page fault handler with CR2 + error code decode test -> "PF_OK"
 12) NX (non-executable pages) deterministic test -> "NX_OK"
 13) VGA text console deterministic check -> "VGA_OK"
+
+14) Shell line editing with Backspace support test -> "EDIT_OK"
