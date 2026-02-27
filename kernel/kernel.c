@@ -55,6 +55,8 @@ static void keyboard_test(void) {
 #endif
 
 void kernel_main(uint64_t mb_magic, uint64_t mb_info_addr) {
+  (void)mb_magic;
+  (void)mb_info_addr;
 #ifdef KEYBOARD_TEST
   serial_init();
   keyboard_init();
