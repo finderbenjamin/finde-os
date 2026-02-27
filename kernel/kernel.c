@@ -57,6 +57,13 @@ static void keyboard_test(void) {
 void kernel_main(uint64_t mb_magic, uint64_t mb_info_addr) {
   (void)mb_magic;
   (void)mb_info_addr;
+#ifdef BOOT_TEST
+  __asm__ volatile ("cli");
+  serial_init();
+  serial_write("BOOT_OK\n");
+  for (;;) { __asm__ volatile ("hlt"); }
+#endif
+
 #ifdef KEYBOARD_TEST
   serial_init();
   keyboard_init();
