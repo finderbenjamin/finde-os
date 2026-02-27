@@ -2,7 +2,7 @@ CC=clang
 LD=ld.lld
 AS=clang
 CFLAGS=-ffreestanding -fno-stack-protector -fno-pic -mno-red-zone -m64 -O2 -Wall -Wextra
-ASFLAGS=-c -ffreestanding -m64
+ASFLAGS=-c -m64
 LDFLAGS=-T linker.ld -nostdlib
 
 BUILD=build
