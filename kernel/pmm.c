@@ -58,7 +58,9 @@ void pmm_init(const multiboot2_info_t* mb_info) {
     frame_bitmap[i] = ~0ull;
   }
 
-  if (mb_info != (const multiboot2_info_t*)0) {
+  if (mb_info != (const multiboot2_info_t*)0 &&
+      mb_info->total_size >= sizeof(multiboot2_info_t) &&
+      mb_info->total_size <= 0x100000u) {
     const uint8_t* info_end = (const uint8_t*)mb_info + mb_info->total_size;
     const multiboot2_tag_t* tag = multiboot2_first_tag(mb_info);
 
@@ -78,7 +80,12 @@ void pmm_init(const multiboot2_info_t* mb_info) {
         const uint8_t* entry_ptr = (const uint8_t*)mmap_tag + sizeof(multiboot2_tag_mmap_t);
 
         if (mmap_tag->entry_size < sizeof(multiboot2_mmap_entry_t)) {
-          tag = multiboot2_next_tag(tag);
+          const multiboot2_tag_t* next_tag = multiboot2_next_tag(tag);
+          if ((const uint8_t*)next_tag <= (const uint8_t*)tag) {
+            break;
+          }
+          tag = next_tag;
+          ++tag_count;
           continue;
         }
 
@@ -175,4 +182,12 @@ void pmm_free_frame(uint64_t frame_addr) {
   }
 
   bitmap_clear(frame);
+}
+
+uint64_t pmm_alloc_page(void) {
+  return pmm_alloc_frame();
+}
+
+void pmm_free_page(uint64_t page_addr) {
+  pmm_free_frame(page_addr);
 }

@@ -18,7 +18,7 @@ extern void isr_4(void);
 extern uint8_t _kernel_start;
 extern uint8_t _kernel_end;
 
-#ifdef PMM_TEST
+#if defined(PMM_TEST) || defined(VMM_TEST)
 static uint64_t align_down_4k(uint64_t value) {
   return value & ~0xFFFull;
 }
@@ -26,7 +26,9 @@ static uint64_t align_down_4k(uint64_t value) {
 static uint64_t align_up_4k(uint64_t value) {
   return (value + 0xFFFull) & ~0xFFFull;
 }
+#endif
 
+#ifdef PMM_TEST
 static __attribute__((noreturn)) void pmm_test_fail(void) {
   serial_write("PMM_FAIL\n");
   panic("PMM_TEST");
@@ -34,6 +36,21 @@ static __attribute__((noreturn)) void pmm_test_fail(void) {
 
 static __attribute__((noreturn)) void pmm_test_halt_success(void) {
   serial_write("PMM_OK\n");
+  __asm__ volatile ("cli");
+  for (;;) {
+    __asm__ volatile ("hlt");
+  }
+}
+#endif
+
+#ifdef VMM_TEST
+static __attribute__((noreturn)) void vmm_test_fail(void) {
+  serial_write("VMM_FAIL\n");
+  panic("VMM_TEST");
+}
+
+static __attribute__((noreturn)) void vmm_test_halt_success(void) {
+  serial_write("VMM_OK\n");
   __asm__ volatile ("cli");
   for (;;) {
     __asm__ volatile ("hlt");
@@ -83,16 +100,51 @@ void kernel_main(uint64_t mb_magic, uint64_t mb_info_addr) {
 
 #ifdef PMM_TEST
   serial_init();
-
   if ((uint32_t)mb_magic != MULTIBOOT2_BOOTLOADER_MAGIC) {
     pmm_test_fail();
   }
 
-  serial_write("PMM_OK\n");
-  __asm__ volatile ("cli");
-  for (;;) {
-    __asm__ volatile ("hlt");
+  pmm_test_halt_success();
+#endif
+
+#ifdef VMM_TEST
+  serial_init();
+  if ((uint32_t)mb_magic != MULTIBOOT2_BOOTLOADER_MAGIC) {
+    vmm_test_fail();
   }
+
+  const uint64_t mb_info_phys = (uint64_t)(uint32_t)mb_info_addr;
+  pmm_reserve_range(0, 0x2000000ull);
+
+  const uint64_t kernel_start = align_down_4k((uint64_t)(uintptr_t)&_kernel_start);
+  const uint64_t kernel_end = align_up_4k((uint64_t)(uintptr_t)&_kernel_end);
+  pmm_reserve_range(kernel_start, kernel_end);
+
+  const uint64_t mb_start = align_down_4k(mb_info_phys);
+  const uint64_t mb_end = align_up_4k(mb_info_phys + 4096ull);
+  pmm_reserve_range(mb_start, mb_end);
+
+  const uint64_t data_page = pmm_alloc_page();
+  if (data_page == 0) {
+    vmm_test_fail();
+  }
+
+  const uint64_t test_virt = data_page;
+  if (vmm_map_page(test_virt, data_page, VMM_PAGE_PRESENT | VMM_PAGE_WRITABLE) != 0) {
+    pmm_free_page(data_page);
+    vmm_test_fail();
+  }
+
+  volatile uint64_t* test_ptr = (volatile uint64_t*)(uintptr_t)test_virt;
+  const uint64_t pattern = 0x1122334455667788ull;
+  *test_ptr = pattern;
+  if (*test_ptr != pattern) {
+    pmm_free_page(data_page);
+    vmm_test_fail();
+  }
+
+  pmm_free_page(data_page);
+  vmm_test_halt_success();
 #endif
 
 #ifdef BOOT_TEST
