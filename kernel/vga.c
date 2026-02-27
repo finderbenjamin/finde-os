@@ -48,6 +48,22 @@ void vga_init(void) {
 }
 
 void vga_putc(char c) {
+  if (c == '\b') {
+    if (g_col == 0 && g_row == 0) {
+      return;
+    }
+
+    if (g_col > 0) {
+      --g_col;
+    } else {
+      --g_row;
+      g_col = VGA_WIDTH - 1u;
+    }
+
+    VGA_TEXT_BUFFER[g_row * VGA_WIDTH + g_col] = vga_cell(' ');
+    return;
+  }
+
   if (c == '\n') {
     g_col = 0;
     ++g_row;
