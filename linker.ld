@@ -4,7 +4,7 @@ SECTIONS {
   . = 1M;
   _kernel_start = .;
 
-  .text : { *(.text*) }
+  .text : { KEEP(*(.multiboot)) *(.text*) }
   .rodata : { *(.rodata*) }
   .data : { *(.data*) }
   .bss : { *(.bss*) *(COMMON) }

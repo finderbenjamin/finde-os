@@ -15,7 +15,7 @@
 .set GDT64_CODE, 0x08
 .set GDT64_DATA, 0x10
 
-.section .multiboot
+.section .multiboot, "a"
 .align 8
 header_start:
   .long MAGIC
