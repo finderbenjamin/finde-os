@@ -18,6 +18,16 @@ extern void isr_4(void);
 extern uint8_t _kernel_start;
 extern uint8_t _kernel_end;
 
+#ifdef PF_TEST
+static __attribute__((noreturn)) void pf_test_fail(void) {
+  serial_write("PF_FAIL\n");
+  __asm__ volatile ("cli");
+  for (;;) {
+    __asm__ volatile ("hlt");
+  }
+}
+#endif
+
 #ifdef PMM_TEST
 static uint64_t align_down_4k(uint64_t value) {
   return value & ~0xFFFull;
@@ -93,6 +103,18 @@ void kernel_main(uint64_t mb_magic, uint64_t mb_info_addr) {
   for (;;) {
     __asm__ volatile ("hlt");
   }
+#endif
+
+#ifdef PF_TEST
+  serial_init();
+
+  if ((uint32_t)mb_magic != MULTIBOOT2_BOOTLOADER_MAGIC) {
+    pf_test_fail();
+  }
+
+  idt_init();
+  *(volatile uint64_t*)0x00000DEADBEEF000ull = 0x1234;
+  pf_test_fail();
 #endif
 
 #ifdef BOOT_TEST

@@ -7,3 +7,4 @@
 7) Keyboard decoder test -> "KBD_OK"
 8) Virtual memory stack test -> "VM_OK"
 9) Physical memory manager test via multiboot2 map -> "PMM_OK"
+10) Page fault handler with CR2 + error-code decode test -> "PF_OK"

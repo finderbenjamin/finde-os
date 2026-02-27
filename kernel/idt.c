@@ -71,6 +71,34 @@ extern void irq_0(void);
 extern void irq_1(void);
 extern void irq_ignore(void);
 
+static void serial_write_hex64(uint64_t value) {
+  static const char digits[] = "0123456789ABCDEF";
+  char out[18];
+  out[0] = '0';
+  out[1] = 'x';
+  for (int i = 0; i < 16; ++i) {
+    const uint8_t nibble = (uint8_t)((value >> ((15 - i) * 4)) & 0xF);
+    out[2 + i] = digits[nibble];
+  }
+  out[17] = '\0';
+  serial_write(out);
+}
+
+__attribute__((noreturn)) void isr_page_fault(uint64_t cr2, uint64_t error_code) {
+  serial_write("PF CR2=");
+  serial_write_hex64(cr2);
+  serial_write(" ERR=");
+  serial_write_hex64(error_code);
+  serial_write("\n");
+#ifdef PF_TEST
+  serial_write("PF_OK\n");
+#endif
+  __asm__ volatile ("cli");
+  for (;;) {
+    __asm__ volatile ("hlt");
+  }
+}
+
 static void set_gate(int vec, void (*handler)(void), uint8_t flags, uint16_t selector) {
   uint64_t addr = (uint64_t)handler;
 

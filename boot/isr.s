@@ -18,6 +18,7 @@ isr_\n:
 
 .extern g_timer_ticks
 .extern keyboard_handle_scancode
+.extern isr_page_fault
 
 .set COM1, 0x3F8
 
@@ -40,7 +41,13 @@ serial_write_al:
 isr_common:
   cli
   movq (%rsp), %rbx
+  cmpq $14, %rbx
+  jne 0f
+  movq 8(%rsp), %rsi
+  movq %cr2, %rdi
+  call isr_page_fault
 
+0:
   movb $'E', %al
   call serial_write_al
   movb $'X', %al
