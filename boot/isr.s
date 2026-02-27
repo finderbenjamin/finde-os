@@ -37,6 +37,33 @@ serial_write_al:
   popq %rdx
   ret
 
+serial_write_hex64_rax:
+  pushq %rbx
+  pushq %rcx
+  pushq %rdx
+  movq %rax, %rbx
+  movq $16, %rcx
+1:
+  movq %rbx, %rdx
+  shrq $60, %rdx
+  andq $0xF, %rdx
+  cmpb $10, %dl
+  jb 2f
+  addb $55, %dl
+  jmp 3f
+2:
+  addb $48, %dl
+3:
+  movb %dl, %al
+  call serial_write_al
+  shlq $4, %rbx
+  decq %rcx
+  jnz 1b
+  popq %rdx
+  popq %rcx
+  popq %rbx
+  ret
+
 isr_common:
   cli
   movq (%rsp), %rbx
@@ -130,7 +157,68 @@ ISR_ERR 10
 ISR_ERR 11
 ISR_ERR 12
 ISR_ERR 13
-ISR_ERR 14
+
+.global isr_14
+isr_14:
+  cli
+
+  movb $'P', %al
+  call serial_write_al
+  movb $'F', %al
+  call serial_write_al
+  movb $' ', %al
+  call serial_write_al
+  movb $'C', %al
+  call serial_write_al
+  movb $'R', %al
+  call serial_write_al
+  movb $'2', %al
+  call serial_write_al
+  movb $'=', %al
+  call serial_write_al
+  movb $'0', %al
+  call serial_write_al
+  movb $'x', %al
+  call serial_write_al
+  movq %cr2, %rax
+  call serial_write_hex64_rax
+
+  movb $' ', %al
+  call serial_write_al
+  movb $'E', %al
+  call serial_write_al
+  movb $'R', %al
+  call serial_write_al
+  movb $'R', %al
+  call serial_write_al
+  movb $'=', %al
+  call serial_write_al
+  movb $'0', %al
+  call serial_write_al
+  movb $'x', %al
+  call serial_write_al
+  movq (%rsp), %rax
+  call serial_write_hex64_rax
+  movb $'\n', %al
+  call serial_write_al
+
+  movb $'P', %al
+  call serial_write_al
+  movb $'F', %al
+  call serial_write_al
+  movb $'_', %al
+  call serial_write_al
+  movb $'O', %al
+  call serial_write_al
+  movb $'K', %al
+  call serial_write_al
+  movb $'\n', %al
+  call serial_write_al
+
+1:
+  hlt
+  jmp 1b
+
 ISR_NOERR 15
 ISR_NOERR 16
 ISR_ERR 17

@@ -43,6 +43,14 @@ static __attribute__((noreturn)) void pmm_test_halt_success(void) {
 }
 #endif
 
+
+#ifdef PF_TEST
+static __attribute__((noreturn)) void pf_test_fail(void) {
+  serial_write("PF_FAIL\n");
+  panic("PF_TEST");
+}
+#endif
+
 #ifdef VMM_TEST
 static __attribute__((noreturn)) void vmm_test_fail(void) {
   serial_write("VMM_FAIL\n");
@@ -145,6 +153,25 @@ void kernel_main(uint64_t mb_magic, uint64_t mb_info_addr) {
 
   pmm_free_page(data_page);
   vmm_test_halt_success();
+#endif
+
+
+#ifdef PF_TEST
+  serial_init();
+  if ((uint32_t)mb_magic != MULTIBOOT2_BOOTLOADER_MAGIC) {
+    pf_test_fail();
+  }
+
+  idt_init();
+  interrupts_init();
+
+  *(volatile uint64_t*)(uintptr_t)0x00000DEADBEEF000ull = 0x1;
+
+  serial_write("PF_FAIL\n");
+  __asm__ volatile ("cli");
+  for (;;) {
+    __asm__ volatile ("hlt");
+  }
 #endif
 
 #ifdef BOOT_TEST
