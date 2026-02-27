@@ -2,6 +2,7 @@
 #include <stdint.h>
 
 #include "console.h"
+#include "cap.h"
 #include "heap.h"
 #include "idt.h"
 #include "keyboard.h"
@@ -29,6 +30,8 @@ static uint64_t align_up_4k(uint64_t value) {
   return (value + 0xFFFull) & ~0xFFFull;
 }
 #endif
+
+
 
 #ifdef PMM_TEST
 static __attribute__((noreturn)) void pmm_test_fail(void) {
@@ -136,9 +139,58 @@ static void keyboard_test(void) {
 }
 #endif
 
+
+#ifdef CAP_TEST
+static __attribute__((noreturn)) void cap_test_fail(void) {
+  serial_write("CAP_FAIL\n");
+  panic("CAP_TEST");
+}
+
+static __attribute__((noreturn)) void cap_test_halt_success(void) {
+  serial_write("CAP_OK\n");
+  __asm__ volatile ("cli");
+  for (;;) {
+    __asm__ volatile ("hlt");
+  }
+}
+#endif
+
+
 void kernel_main(uint64_t mb_magic, uint64_t mb_info_addr) {
   (void)mb_magic;
   (void)mb_info_addr;
+
+
+#ifdef CAP_TEST
+  serial_init();
+  cap_init();
+
+  const uint64_t handle = cap_create(1u, CAP_R_READ | CAP_R_WRITE);
+  if (handle == 0) {
+    cap_test_fail();
+  }
+  if (cap_check(handle, 1u, CAP_R_READ) != 1) {
+    cap_test_fail();
+  }
+  if (cap_check(handle, 1u, CAP_R_READ | CAP_R_WRITE) != 1) {
+    cap_test_fail();
+  }
+  if (cap_check(handle, 1u, CAP_R_EXEC) != 0) {
+    cap_test_fail();
+  }
+  if (cap_check(handle, 2u, CAP_R_READ) != 0) {
+    cap_test_fail();
+  }
+  if (cap_destroy(handle) != 1) {
+    cap_test_fail();
+  }
+  if (cap_check(handle, 1u, CAP_R_READ) != 0) {
+    cap_test_fail();
+  }
+
+  cap_test_halt_success();
+#endif
+
 
 #ifdef PMM_TEST
   serial_init();

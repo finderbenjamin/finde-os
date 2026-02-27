@@ -13,3 +13,5 @@
 13) VGA text console deterministic check -> "VGA_OK"
 
 14) Shell line editing with Backspace support test -> "EDIT_OK"
+
+15) Capability primitives test -> "CAP_OK"
