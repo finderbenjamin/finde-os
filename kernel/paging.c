@@ -3,6 +3,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "pmm.h"
+
 #define PAGE_SIZE 4096ull
 #define PAGE_ENTRIES 512u
 
@@ -79,4 +81,76 @@ void paging_init(uint64_t kernel_start_phys, uint64_t kernel_end_phys) {
   __asm__ volatile ("mov %%cr0, %0" : "=r"(cr0));
   cr0 |= (1ull << 31);
   __asm__ volatile ("mov %0, %%cr0" : : "r"(cr0) : "memory");
+}
+
+
+static uint16_t vmm_index(uint64_t virt_addr, uint8_t shift) {
+  return (uint16_t)((virt_addr >> shift) & 0x1FFull);
+}
+
+static void vmm_zero_page(uint64_t phys_addr) {
+  uint64_t* page = (uint64_t*)(uintptr_t)phys_addr;
+  for (size_t i = 0; i < PAGE_ENTRIES; ++i) {
+    page[i] = 0;
+  }
+}
+
+static uint64_t* vmm_next_table(uint64_t* table, uint16_t index, uint64_t flags) {
+  uint64_t entry = table[index];
+
+  if ((entry & PAGE_PRESENT) != 0) {
+    if ((entry & (1ull << 7)) != 0) {
+      return (uint64_t*)0;
+    }
+    return (uint64_t*)(uintptr_t)(entry & ~0xFFFull);
+  }
+
+  const uint64_t new_page = pmm_alloc_page();
+  if (new_page == 0) {
+    return (uint64_t*)0;
+  }
+
+  vmm_zero_page(new_page);
+  table[index] = new_page | (flags & 0xFFFull) | PAGE_PRESENT;
+  return (uint64_t*)(uintptr_t)new_page;
+}
+
+int vmm_map_page(uint64_t virt_addr, uint64_t phys_addr, uint64_t flags) {
+  if ((virt_addr & 0xFFFull) != 0 || (phys_addr & 0xFFFull) != 0) {
+    return -1;
+  }
+
+  uint64_t cr3;
+  __asm__ volatile ("mov %%cr3, %0" : "=r"(cr3));
+
+  uint64_t* pml4_table = (uint64_t*)(uintptr_t)(cr3 & ~0xFFFull);
+  uint64_t* pdpt = vmm_next_table(pml4_table, vmm_index(virt_addr, 39), flags);
+  if (pdpt == (uint64_t*)0) {
+    return -1;
+  }
+
+  uint64_t* pd = vmm_next_table(pdpt, vmm_index(virt_addr, 30), flags);
+  if (pd == (uint64_t*)0) {
+    return -1;
+  }
+
+  const uint16_t pd_index = vmm_index(virt_addr, 21);
+  if ((pd[pd_index] & PAGE_PRESENT) != 0 && (pd[pd_index] & (1ull << 7)) != 0) {
+    const uint64_t mapped_phys = (pd[pd_index] & 0xFFFFFFE00000ull) | (virt_addr & 0x1FFFFFull);
+    if (mapped_phys == phys_addr) {
+      __asm__ volatile ("invlpg (%0)" : : "r"((void*)(uintptr_t)virt_addr) : "memory");
+      return 0;
+    }
+    return -1;
+  }
+
+  uint64_t* pt = vmm_next_table(pd, pd_index, flags);
+  if (pt == (uint64_t*)0) {
+    return -1;
+  }
+
+  pt[vmm_index(virt_addr, 12)] = phys_addr | (flags & 0xFFFull) | PAGE_PRESENT;
+  __asm__ volatile ("invlpg (%0)" : : "r"((void*)(uintptr_t)virt_addr) : "memory");
+
+  return 0;
 }
