@@ -17,3 +17,5 @@
 15) Capability primitives test -> "CAP_OK"
 
 16) Capability enforcement gate test -> "CAP_ENFORCE_OK"
+
+17) Syscall capability gate test -> "SYSCALL_OK"
