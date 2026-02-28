@@ -15,3 +15,5 @@
 14) Shell line editing with Backspace support test -> "EDIT_OK"
 
 15) Capability primitives test -> "CAP_OK"
+
+16) Capability enforcement gate test -> "CAP_ENFORCE_OK"
