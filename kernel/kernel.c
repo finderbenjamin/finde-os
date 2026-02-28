@@ -248,6 +248,21 @@ static int task_cap_test_sys_write(const task_cap_test_task_t* task) {
 }
 #endif
 
+#ifdef CAP_GEN_TEST
+static __attribute__((noreturn)) void cap_gen_test_fail(void) {
+  serial_write("CAP_GEN_FAIL\n");
+  panic("CAP_GEN_TEST");
+}
+
+static __attribute__((noreturn)) void cap_gen_test_halt_success(void) {
+  serial_write("CAP_GEN_OK\n");
+  __asm__ volatile ("cli");
+  for (;;) {
+    __asm__ volatile ("hlt");
+  }
+}
+#endif
+
 #ifdef CAP_TEST
 static __attribute__((noreturn)) void cap_test_fail(void) {
   serial_write("CAP_FAIL\n");
@@ -391,6 +406,37 @@ void kernel_main(uint64_t mb_magic, uint64_t mb_info_addr) {
   }
 
   task_cap_test_halt_success();
+#endif
+
+
+#ifdef CAP_GEN_TEST
+  serial_init();
+  cap_init();
+
+  const uint64_t old_handle = cap_create(1u, CAP_R_READ);
+  if (old_handle == 0) {
+    cap_gen_test_fail();
+  }
+  if (cap_check(old_handle, 1u, CAP_R_READ) != 1) {
+    cap_gen_test_fail();
+  }
+
+  if (cap_destroy(old_handle) != 1) {
+    cap_gen_test_fail();
+  }
+  if (cap_check(old_handle, 1u, CAP_R_READ) != 0) {
+    cap_gen_test_fail();
+  }
+
+  const uint64_t new_handle = cap_create(1u, CAP_R_READ);
+  if (new_handle == 0 || new_handle == old_handle) {
+    cap_gen_test_fail();
+  }
+  if (cap_check(new_handle, 1u, CAP_R_READ) != 1) {
+    cap_gen_test_fail();
+  }
+
+  cap_gen_test_halt_success();
 #endif
 
 #ifdef CAP_TEST

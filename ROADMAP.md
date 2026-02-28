@@ -23,3 +23,5 @@
 18) Minimal task scheduler deterministic test -> "TASK_OK"
 
 19) Task capability isolation test -> "TASK_CAP_OK"
+
+20) Capability generation stale-handle guard test -> "CAP_GEN_OK"
