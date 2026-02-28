@@ -140,6 +140,26 @@ static void keyboard_test(void) {
 #endif
 
 
+
+#ifdef CAP_ENFORCE_TEST
+static __attribute__((noreturn)) void cap_enforce_test_fail(void) {
+  serial_write("CAP_ENFORCE_FAIL\n");
+  panic("CAP_ENFORCE_TEST");
+}
+
+static __attribute__((noreturn)) void cap_enforce_test_halt_success(void) {
+  serial_write("CAP_ENFORCE_OK\n");
+  __asm__ volatile ("cli");
+  for (;;) {
+    __asm__ volatile ("hlt");
+  }
+}
+
+static int cap_enforce_require_write(uint64_t handle) {
+  return cap_check(handle, 1u, CAP_R_WRITE);
+}
+#endif
+
 #ifdef CAP_TEST
 static __attribute__((noreturn)) void cap_test_fail(void) {
   serial_write("CAP_FAIL\n");
@@ -160,6 +180,37 @@ void kernel_main(uint64_t mb_magic, uint64_t mb_info_addr) {
   (void)mb_magic;
   (void)mb_info_addr;
 
+
+
+#ifdef CAP_ENFORCE_TEST
+  serial_init();
+  cap_init();
+
+  const uint64_t read_only = cap_create(1u, CAP_R_READ);
+  if (read_only == 0) {
+    cap_enforce_test_fail();
+  }
+  if (cap_enforce_require_write(read_only) != 0) {
+    cap_enforce_test_fail();
+  }
+
+  const uint64_t read_write = cap_create(1u, CAP_R_READ | CAP_R_WRITE);
+  if (read_write == 0) {
+    cap_enforce_test_fail();
+  }
+  if (cap_enforce_require_write(read_write) != 1) {
+    cap_enforce_test_fail();
+  }
+
+  if (cap_destroy(read_write) != 1) {
+    cap_enforce_test_fail();
+  }
+  if (cap_enforce_require_write(read_write) != 0) {
+    cap_enforce_test_fail();
+  }
+
+  cap_enforce_test_halt_success();
+#endif
 
 #ifdef CAP_TEST
   serial_init();
