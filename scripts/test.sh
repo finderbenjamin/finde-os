@@ -21,7 +21,7 @@ run_qemu() {
   fi
 }
 
-echo "[1/19] normal boot check"
+echo "[1/20] normal boot check"
 make clean
 make
 run_qemu log.txt
@@ -31,7 +31,7 @@ if ! tr -d '\r' < log.txt | grep -Fq "IDT_OK"; then
   exit 1
 fi
 
-echo "[2/19] boot marker check"
+echo "[2/20] boot marker check"
 make clean
 make BOOT_TEST=1
 run_qemu boot_log.txt
@@ -41,7 +41,7 @@ if ! tr -d '\r' < boot_log.txt | grep -Fq "BOOT_OK"; then
   exit 1
 fi
 
-echo "[3/19] panic path check"
+echo "[3/20] panic path check"
 make clean
 make PANIC_TEST=1
 run_qemu panic_log.txt
@@ -51,7 +51,7 @@ if ! tr -d '\r' < panic_log.txt | grep -Fq "PANIC:"; then
   exit 1
 fi
 
-echo "[4/19] idt exception check"
+echo "[4/20] idt exception check"
 make clean
 make IDT_TEST=1
 run_qemu idt_log.txt
@@ -66,7 +66,7 @@ if ! tr -d '\r' < idt_log.txt | grep -Fq "EXC:4"; then
   exit 1
 fi
 
-echo "[5/19] timer interrupt check"
+echo "[5/20] timer interrupt check"
 make clean
 make TIMER_TEST=1
 run_qemu timer_log.txt
@@ -76,7 +76,7 @@ if ! tr -d '\r' < timer_log.txt | grep -Fq "TICK_OK"; then
   exit 1
 fi
 
-echo "[6/19] heap allocator check"
+echo "[6/20] heap allocator check"
 make clean
 make HEAP_TEST=1
 run_qemu heap_log.txt
@@ -86,7 +86,7 @@ if ! tr -d '\r' < heap_log.txt | grep -Fq "HEAP_OK"; then
   exit 1
 fi
 
-echo "[7/19] shell test check"
+echo "[7/20] shell test check"
 make clean
 make SHELL_TEST=1
 run_qemu shell_log.txt
@@ -96,7 +96,7 @@ if ! tr -d '\r' < shell_log.txt | grep -Fq "SHELL_OK"; then
   exit 1
 fi
 
-echo "[8/19] keyboard decoder check"
+echo "[8/20] keyboard decoder check"
 make clean
 make KEYBOARD_TEST=1
 run_qemu keyboard_log.txt
@@ -106,7 +106,7 @@ if ! tr -d '\r' < keyboard_log.txt | grep -Fq "KBD_OK"; then
   exit 1
 fi
 
-echo "[9/19] virtual memory stack check"
+echo "[9/20] virtual memory stack check"
 make clean
 make VM_TEST=1
 run_qemu vm_log.txt
@@ -116,7 +116,7 @@ if ! tr -d '\r' < vm_log.txt | grep -Fq "VM_OK"; then
   exit 1
 fi
 
-echo "[10/19] physical memory manager check"
+echo "[10/20] physical memory manager check"
 make clean
 make PMM_TEST=1
 run_qemu pmm_log.txt
@@ -126,7 +126,7 @@ if ! tr -d '\r' < pmm_log.txt | grep -Fq "PMM_OK"; then
   exit 1
 fi
 
-echo "[11/19] virtual memory mapping check"
+echo "[11/20] virtual memory mapping check"
 make clean
 make VMM_TEST=1
 run_qemu vmm_log.txt
@@ -136,7 +136,7 @@ if ! tr -d '\r' < vmm_log.txt | grep -Fq "VMM_OK"; then
   exit 1
 fi
 
-echo "[12/19] page fault handler check"
+echo "[12/20] page fault handler check"
 make clean
 make PF_TEST=1
 run_qemu pf_log.txt
@@ -146,7 +146,7 @@ if ! tr -d '\r' < pf_log.txt | grep -Fxq "PF_OK"; then
   exit 1
 fi
 
-echo "[13/19] nx execute protection check"
+echo "[13/20] nx execute protection check"
 make clean
 make NX_TEST=1
 run_qemu nx_log.txt
@@ -156,7 +156,7 @@ if ! tr -d '\r' < nx_log.txt | grep -Fxq "NX_OK"; then
   exit 1
 fi
 
-echo "[14/19] VGA console check"
+echo "[14/20] VGA console check"
 make clean
 make VGA_TEST=1
 run_qemu vga_log.txt
@@ -166,7 +166,7 @@ if ! tr -d '\r' < vga_log.txt | sed -E 's/\x1B\[[0-9;]*[[:alpha:]]//g' | grep -F
   exit 1
 fi
 
-echo "[15/19] shell line editing check"
+echo "[15/20] shell line editing check"
 make clean
 make EDIT_TEST=1
 run_qemu edit_log.txt
@@ -176,7 +176,7 @@ if ! tr -d '\r' < edit_log.txt | grep -Fxq "EDIT_OK"; then
   exit 1
 fi
 
-echo "[16/19] capability primitives check"
+echo "[16/20] capability primitives check"
 make clean
 make CAP_TEST=1
 run_qemu cap_log.txt
@@ -186,7 +186,7 @@ if ! tr -d '\r' < cap_log.txt | grep -Fq "CAP_OK"; then
   exit 1
 fi
 
-echo "[17/19] capability enforcement check"
+echo "[17/20] capability enforcement check"
 make clean
 make CAP_ENFORCE_TEST=1
 run_qemu cap_enforce_log.txt
@@ -197,7 +197,7 @@ if ! tr -d '\r' < cap_enforce_log.txt | grep -Fq "CAP_ENFORCE_OK"; then
 fi
 
 
-echo "[18/19] syscall capability gate check"
+echo "[18/20] syscall capability gate check"
 make clean
 make SYSCALL_TEST=1
 run_qemu syscall_log.txt
@@ -208,13 +208,24 @@ if ! tr -d '\r' < syscall_log.txt | grep -Fq "SYSCALL_OK"; then
 fi
 
 
-echo "[19/19] task scheduler check"
+echo "[19/20] task scheduler check"
 make clean
 make TASK_TEST=1
 run_qemu task_log.txt
 
 if ! tr -d '\r' < task_log.txt | grep -Fq "TASK_OK"; then
   echo "Expected serial marker TASK_OK not found" >&2
+  exit 1
+fi
+
+
+echo "[20/20] task capability isolation check"
+make clean
+make TASK_CAP_TEST=1
+run_qemu task_cap_log.txt
+
+if ! tr -d '\r' < task_cap_log.txt | grep -Fq "TASK_CAP_OK"; then
+  echo "Expected serial marker TASK_CAP_OK not found" >&2
   exit 1
 fi
 

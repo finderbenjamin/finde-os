@@ -21,3 +21,5 @@
 17) Syscall capability gate test -> "SYSCALL_OK"
 
 18) Minimal task scheduler deterministic test -> "TASK_OK"
+
+19) Task capability isolation test -> "TASK_CAP_OK"
