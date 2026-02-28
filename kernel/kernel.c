@@ -160,6 +160,31 @@ static int cap_enforce_require_write(uint64_t handle) {
 }
 #endif
 
+
+#ifdef SYSCALL_TEST
+static __attribute__((noreturn)) void syscall_test_fail(void) {
+  serial_write("SYSCALL_FAIL\n");
+  panic("SYSCALL_TEST");
+}
+
+static __attribute__((noreturn)) void syscall_test_halt_success(void) {
+  serial_write("SYSCALL_OK\n");
+  __asm__ volatile ("cli");
+  for (;;) {
+    __asm__ volatile ("hlt");
+  }
+}
+
+static int syscall_log_write(uint64_t handle, uint32_t pid, const char* msg) {
+  if (cap_check(handle, pid, CAP_R_WRITE) == 0) {
+    return 0;
+  }
+
+  serial_write(msg);
+  return 1;
+}
+#endif
+
 #ifdef CAP_TEST
 static __attribute__((noreturn)) void cap_test_fail(void) {
   serial_write("CAP_FAIL\n");
@@ -210,6 +235,30 @@ void kernel_main(uint64_t mb_magic, uint64_t mb_info_addr) {
   }
 
   cap_enforce_test_halt_success();
+#endif
+
+
+#ifdef SYSCALL_TEST
+  serial_init();
+  cap_init();
+
+  const uint64_t denied = cap_create(1u, CAP_R_READ);
+  if (denied == 0) {
+    syscall_test_fail();
+  }
+  if (syscall_log_write(denied, 1u, "SYSCALL_DENY_FAIL\n") != 0) {
+    syscall_test_fail();
+  }
+
+  const uint64_t allowed = cap_create(1u, CAP_R_READ | CAP_R_WRITE);
+  if (allowed == 0) {
+    syscall_test_fail();
+  }
+  if (syscall_log_write(allowed, 1u, "SYSCALL_PATH\n") != 1) {
+    syscall_test_fail();
+  }
+
+  syscall_test_halt_success();
 #endif
 
 #ifdef CAP_TEST
