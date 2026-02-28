@@ -45,3 +45,6 @@ Include all of the following in the final response:
 - Evolve toward dual app isolation modes:
   - normal sandboxed process mode
   - fully isolated MicroVM mode
+
+## 7) Communication style for OS-specific questions
+- If the user asks anything OS-specific, explain it as simply as possible in plain, beginner-friendly language.
