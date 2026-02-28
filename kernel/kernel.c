@@ -218,6 +218,36 @@ static int task_test_run(task_test_task_t* task) {
 }
 #endif
 
+#ifdef TASK_CAP_TEST
+static __attribute__((noreturn)) void task_cap_test_fail(void) {
+  serial_write("TASK_CAP_FAIL\n");
+  panic("TASK_CAP_TEST");
+}
+
+static __attribute__((noreturn)) void task_cap_test_halt_success(void) {
+  serial_write("TASK_CAP_OK\n");
+  __asm__ volatile ("cli");
+  for (;;) {
+    __asm__ volatile ("hlt");
+  }
+}
+
+typedef struct {
+  uint32_t pid;
+  uint64_t write_cap;
+  uint64_t read_cap;
+} task_cap_test_task_t;
+
+static int task_cap_test_sys_write(const task_cap_test_task_t* task) {
+  if (cap_check(task->write_cap, task->pid, CAP_R_WRITE) == 0) {
+    return 0;
+  }
+
+  serial_write("TASK_CAP_PATH\n");
+  return 1;
+}
+#endif
+
 #ifdef CAP_TEST
 static __attribute__((noreturn)) void cap_test_fail(void) {
   serial_write("CAP_FAIL\n");
@@ -321,6 +351,46 @@ void kernel_main(uint64_t mb_magic, uint64_t mb_info_addr) {
   }
 
   syscall_test_halt_success();
+#endif
+
+#ifdef TASK_CAP_TEST
+  serial_init();
+  cap_init();
+
+  task_cap_test_task_t task_a;
+  task_a.pid = 1u;
+  task_a.write_cap = cap_create(1u, CAP_R_READ | CAP_R_WRITE);
+  task_a.read_cap = cap_create(1u, CAP_R_READ);
+
+  task_cap_test_task_t task_b;
+  task_b.pid = 2u;
+  task_b.write_cap = cap_create(2u, CAP_R_READ | CAP_R_WRITE);
+  task_b.read_cap = cap_create(2u, CAP_R_READ);
+
+  if (task_a.write_cap == 0 || task_a.read_cap == 0 ||
+      task_b.write_cap == 0 || task_b.read_cap == 0) {
+    task_cap_test_fail();
+  }
+
+  if (cap_check(task_a.write_cap, task_a.pid, CAP_R_WRITE) != 1) {
+    task_cap_test_fail();
+  }
+  if (cap_check(task_a.write_cap, task_b.pid, CAP_R_WRITE) != 0) {
+    task_cap_test_fail();
+  }
+
+  if (task_cap_test_sys_write(&task_a) != 1) {
+    task_cap_test_fail();
+  }
+  if (task_cap_test_sys_write(&task_b) != 1) {
+    task_cap_test_fail();
+  }
+
+  if (cap_check(task_a.read_cap, task_a.pid, CAP_R_WRITE) != 0) {
+    task_cap_test_fail();
+  }
+
+  task_cap_test_halt_success();
 #endif
 
 #ifdef CAP_TEST
