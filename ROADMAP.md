@@ -19,3 +19,5 @@
 16) Capability enforcement gate test -> "CAP_ENFORCE_OK"
 
 17) Syscall capability gate test -> "SYSCALL_OK"
+
+18) Minimal task scheduler deterministic test -> "TASK_OK"

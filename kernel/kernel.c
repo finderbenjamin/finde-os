@@ -141,6 +141,8 @@ static void keyboard_test(void) {
 
 
 
+
+
 #ifdef CAP_ENFORCE_TEST
 static __attribute__((noreturn)) void cap_enforce_test_fail(void) {
   serial_write("CAP_ENFORCE_FAIL\n");
@@ -185,6 +187,37 @@ static int syscall_log_write(uint64_t handle, uint32_t pid, const char* msg) {
 }
 #endif
 
+
+#ifdef TASK_TEST
+static __attribute__((noreturn)) void task_test_fail(void) {
+  serial_write("TASK_FAIL\n");
+  panic("TASK_TEST");
+}
+
+static __attribute__((noreturn)) void task_test_halt_success(void) {
+  serial_write("TASK_OK\n");
+  __asm__ volatile ("cli");
+  for (;;) {
+    __asm__ volatile ("hlt");
+  }
+}
+
+typedef struct {
+  uint64_t id;
+  uint64_t budget;
+  uint64_t runs;
+} task_test_task_t;
+
+static int task_test_run(task_test_task_t* task) {
+  if (task->runs >= task->budget) {
+    return 0;
+  }
+
+  task->runs += 1;
+  return 1;
+}
+#endif
+
 #ifdef CAP_TEST
 static __attribute__((noreturn)) void cap_test_fail(void) {
   serial_write("CAP_FAIL\n");
@@ -206,6 +239,35 @@ void kernel_main(uint64_t mb_magic, uint64_t mb_info_addr) {
   (void)mb_info_addr;
 
 
+
+#ifdef TASK_TEST
+  serial_init();
+
+  task_test_task_t tasks[2];
+  tasks[0].id = 1;
+  tasks[0].budget = 3;
+  tasks[0].runs = 0;
+  tasks[1].id = 2;
+  tasks[1].budget = 2;
+  tasks[1].runs = 0;
+
+  const uint64_t expected_runs = tasks[0].budget + tasks[1].budget;
+  uint64_t schedule_steps = 0;
+  uint64_t current = 0;
+  while (schedule_steps < expected_runs) {
+    task_test_task_t* task = &tasks[current];
+    if (task_test_run(task) != 0) {
+      schedule_steps += 1;
+    }
+    current = (current + 1) % 2;
+  }
+
+  if (tasks[0].runs != tasks[0].budget || tasks[1].runs != tasks[1].budget) {
+    task_test_fail();
+  }
+
+  task_test_halt_success();
+#endif
 
 #ifdef CAP_ENFORCE_TEST
   serial_init();
