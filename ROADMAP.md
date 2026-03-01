@@ -27,3 +27,5 @@
 20) Capability generation stale-handle guard test -> "CAP_GEN_OK"
 
 21) Minimal user mode launch path test -> "USERMODE_OK"
+
+22) Syscall deny path test -> "SYSCALL_DENY_OK"
