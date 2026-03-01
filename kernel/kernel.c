@@ -328,6 +328,30 @@ static int user_task_sys_write(uint64_t handle, uint32_t pid, const char* msg) {
   return 1;
 }
 #endif
+
+#ifdef USER_TASK_DENY_TEST
+static __attribute__((noreturn)) void user_task_deny_test_fail(void) {
+  serial_write("USER_TASK_DENY_FAIL\n");
+  panic("USER_TASK_DENY_TEST");
+}
+
+static __attribute__((noreturn)) void user_task_deny_test_halt_success(void) {
+  serial_write("USER_TASK_DENY_OK\n");
+  __asm__ volatile ("cli");
+  for (;;) {
+    __asm__ volatile ("hlt");
+  }
+}
+
+static int user_task_deny_sys_write(uint64_t handle, uint32_t pid, const char* msg) {
+  if (cap_check(handle, pid, CAP_R_WRITE) == 0) {
+    return 0;
+  }
+
+  serial_write(msg);
+  return 1;
+}
+#endif
 #ifdef CAP_TEST
 static __attribute__((noreturn)) void cap_test_fail(void) {
   serial_write("CAP_FAIL\n");
@@ -581,6 +605,32 @@ void kernel_main(uint64_t mb_magic, uint64_t mb_info_addr) {
   }
 
   user_task_test_halt_success();
+#endif
+
+
+#ifdef USER_TASK_DENY_TEST
+  serial_init();
+  cap_init();
+
+  const uint32_t user_pid = 9u;
+  const uint64_t read_only = cap_create(user_pid, CAP_R_READ);
+  if (read_only == 0) {
+    user_task_deny_test_fail();
+  }
+
+  if (user_task_deny_sys_write(read_only, user_pid, "USER_TASK_DENY_PATH\n") != 0) {
+    user_task_deny_test_fail();
+  }
+
+  if (cap_destroy(read_only) != 1) {
+    user_task_deny_test_fail();
+  }
+
+  if (user_task_deny_sys_write(read_only, user_pid, "USER_TASK_DENY_STALE\n") != 0) {
+    user_task_deny_test_fail();
+  }
+
+  user_task_deny_test_halt_success();
 #endif
 
 #ifdef USERMODE_TEST

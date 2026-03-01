@@ -18,6 +18,7 @@ For every new milestone:
 - `scripts/test.sh` must run headless QEMU and validate with serial log grep.
 - If tests fail, fix and rerun until `./scripts/test.sh` prints `PASS`.
 - Never skip tests.
+- Always rerun until `./scripts/test.sh` prints exactly `PASS` before finishing a PR.
 
 ## 3) Build contract
 - Declare milestone flags in `Makefile` as `XYZ_TEST?=0` defaults.
