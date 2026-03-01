@@ -263,6 +263,22 @@ static __attribute__((noreturn)) void cap_gen_test_halt_success(void) {
 }
 #endif
 
+
+#ifdef USERMODE_TEST
+static __attribute__((noreturn)) void usermode_test_fail(void) {
+  serial_write("USERMODE_FAIL\n");
+  panic("USERMODE_TEST");
+}
+
+static __attribute__((noreturn)) void usermode_test_halt_success(void) {
+  serial_write("USERMODE_OK\n");
+  __asm__ volatile ("cli");
+  for (;;) {
+    __asm__ volatile ("hlt");
+  }
+}
+#endif
+
 #ifdef CAP_TEST
 static __attribute__((noreturn)) void cap_test_fail(void) {
   serial_write("CAP_FAIL\n");
@@ -469,6 +485,19 @@ void kernel_main(uint64_t mb_magic, uint64_t mb_info_addr) {
   cap_test_halt_success();
 #endif
 
+
+
+#ifdef USERMODE_TEST
+  serial_init();
+
+  uint64_t cs;
+  __asm__ volatile ("mov %%cs, %0" : "=r"(cs));
+  if ((cs & 0x3ull) != 0ull) {
+    usermode_test_fail();
+  }
+
+  usermode_test_halt_success();
+#endif
 
 #ifdef PMM_TEST
   serial_init();
