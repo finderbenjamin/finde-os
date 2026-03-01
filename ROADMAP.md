@@ -29,3 +29,5 @@
 21) Minimal user mode launch path test -> "USERMODE_OK"
 
 22) Syscall deny path test -> "SYSCALL_DENY_OK"
+
+23) Minimal user task capability write path test -> "USER_TASK_OK"

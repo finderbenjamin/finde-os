@@ -31,6 +31,7 @@ TASK_TEST?=0
 TASK_CAP_TEST?=0
 CAP_GEN_TEST?=0
 USERMODE_TEST?=0
+USER_TASK_TEST?=0
 
 ifeq ($(PANIC_TEST),1)
 CFLAGS += -DPANIC_TEST
@@ -121,6 +122,10 @@ ifeq ($(USERMODE_TEST),1)
 CFLAGS += -DUSERMODE_TEST
 endif
 
+ifeq ($(USER_TASK_TEST),1)
+CFLAGS += -DUSER_TASK_TEST
+endif
+
 all: $(BUILD)/finde-os.iso
 
 $(BUILD):
@@ -179,6 +184,6 @@ $(BUILD)/finde-os.iso: $(BUILD)/kernel.elf boot/grub/grub.cfg
 	grub-mkrescue -o $(BUILD)/finde-os.iso $(ISO_DIR) >/dev/null
 
 clean:
-	rm -rf $(BUILD) log.txt boot_log.txt panic_log.txt idt_log.txt timer_log.txt heap_log.txt shell_log.txt keyboard_log.txt vm_log.txt pmm_log.txt vmm_log.txt pf_log.txt nx_log.txt vga_log.txt edit_log.txt cap_log.txt cap_enforce_log.txt syscall_log.txt syscall_deny_log.txt task_log.txt task_cap_log.txt cap_gen_log.txt usermode_log.txt
+	rm -rf $(BUILD) log.txt boot_log.txt panic_log.txt idt_log.txt timer_log.txt heap_log.txt shell_log.txt keyboard_log.txt vm_log.txt pmm_log.txt vmm_log.txt pf_log.txt nx_log.txt vga_log.txt edit_log.txt cap_log.txt cap_enforce_log.txt syscall_log.txt syscall_deny_log.txt task_log.txt task_cap_log.txt cap_gen_log.txt usermode_log.txt user_task_log.txt
 
 .PHONY: all clean
