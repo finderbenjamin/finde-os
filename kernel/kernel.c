@@ -304,6 +304,30 @@ static __attribute__((noreturn)) void usermode_test_halt_success(void) {
 }
 #endif
 
+
+#ifdef USER_TASK_TEST
+static __attribute__((noreturn)) void user_task_test_fail(void) {
+  serial_write("USER_TASK_FAIL\n");
+  panic("USER_TASK_TEST");
+}
+
+static __attribute__((noreturn)) void user_task_test_halt_success(void) {
+  serial_write("USER_TASK_OK\n");
+  __asm__ volatile ("cli");
+  for (;;) {
+    __asm__ volatile ("hlt");
+  }
+}
+
+static int user_task_sys_write(uint64_t handle, uint32_t pid, const char* msg) {
+  if (cap_check(handle, pid, CAP_R_WRITE) == 0) {
+    return 0;
+  }
+
+  serial_write(msg);
+  return 1;
+}
+#endif
 #ifdef CAP_TEST
 static __attribute__((noreturn)) void cap_test_fail(void) {
   serial_write("CAP_FAIL\n");
@@ -528,6 +552,36 @@ void kernel_main(uint64_t mb_magic, uint64_t mb_info_addr) {
 #endif
 
 
+
+
+#ifdef USER_TASK_TEST
+  serial_init();
+  cap_init();
+
+  const uint32_t user_pid = 7u;
+  const uint64_t write_cap = cap_create(user_pid, CAP_R_WRITE);
+  if (write_cap == 0) {
+    user_task_test_fail();
+  }
+
+  if (user_task_sys_write(write_cap, user_pid, "USER_TASK_PATH\n") != 1) {
+    user_task_test_fail();
+  }
+
+  if (user_task_sys_write(write_cap, user_pid + 1u, "USER_TASK_WRONG_PID\n") != 0) {
+    user_task_test_fail();
+  }
+
+  if (cap_destroy(write_cap) != 1) {
+    user_task_test_fail();
+  }
+
+  if (user_task_sys_write(write_cap, user_pid, "USER_TASK_STALE\n") != 0) {
+    user_task_test_fail();
+  }
+
+  user_task_test_halt_success();
+#endif
 
 #ifdef USERMODE_TEST
   serial_init();
