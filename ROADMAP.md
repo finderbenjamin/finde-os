@@ -33,3 +33,5 @@
 23) Minimal user task capability write path test -> "USER_TASK_OK"
 
 24) User task capability deny path test -> "USER_TASK_DENY_OK"
+
+25) User-space driver isolation smoke test -> "DRV_ISO_OK"
