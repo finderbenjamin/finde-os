@@ -352,6 +352,30 @@ static int user_task_deny_sys_write(uint64_t handle, uint32_t pid, const char* m
   return 1;
 }
 #endif
+
+#ifdef DRV_ISO_TEST
+static __attribute__((noreturn)) void drv_iso_test_fail(void) {
+  serial_write("DRV_ISO_FAIL\n");
+  panic("DRV_ISO_TEST");
+}
+
+static __attribute__((noreturn)) void drv_iso_test_halt_success(void) {
+  serial_write("DRV_ISO_OK\n");
+  __asm__ volatile ("cli");
+  for (;;) {
+    __asm__ volatile ("hlt");
+  }
+}
+
+static int drv_iso_mmio_write(uint64_t handle, uint32_t pid) {
+  if (cap_check(handle, pid, CAP_R_WRITE) == 0) {
+    return 0;
+  }
+
+  return 1;
+}
+#endif
+
 #ifdef CAP_TEST
 static __attribute__((noreturn)) void cap_test_fail(void) {
   serial_write("CAP_FAIL\n");
@@ -643,6 +667,35 @@ void kernel_main(uint64_t mb_magic, uint64_t mb_info_addr) {
   }
 
   usermode_test_halt_success();
+#endif
+
+#ifdef DRV_ISO_TEST
+  serial_init();
+  cap_init();
+
+  const uint32_t driver_pid = 11u;
+  const uint64_t mmio_cap = cap_create(driver_pid, CAP_R_WRITE);
+  if (mmio_cap == 0) {
+    drv_iso_test_fail();
+  }
+
+  if (drv_iso_mmio_write(mmio_cap, driver_pid) != 1) {
+    drv_iso_test_fail();
+  }
+
+  if (drv_iso_mmio_write(mmio_cap, driver_pid + 1u) != 0) {
+    drv_iso_test_fail();
+  }
+
+  if (cap_destroy(mmio_cap) != 1) {
+    drv_iso_test_fail();
+  }
+
+  if (drv_iso_mmio_write(mmio_cap, driver_pid) != 0) {
+    drv_iso_test_fail();
+  }
+
+  drv_iso_test_halt_success();
 #endif
 
 #ifdef PMM_TEST
