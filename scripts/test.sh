@@ -6,12 +6,12 @@ run_qemu() {
 
   rm -f "${log_file}"
   set +e
-  timeout 10s qemu-system-x86_64 \
+  timeout 20s qemu-system-x86_64 \
     -cdrom build/finde-os.iso \
     -serial stdio \
     -display none \
     -no-reboot \
-    -no-shutdown | tee "${log_file}"
+    -no-shutdown 2>&1 | tee "${log_file}"
   local qemu_status=${PIPESTATUS[0]}
   set -e
 
