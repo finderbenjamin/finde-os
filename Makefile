@@ -34,6 +34,14 @@ USERMODE_TEST?=0
 USER_TASK_TEST?=0
 USER_TASK_DENY_TEST?=0
 DRV_ISO_TEST?=0
+MICROVM_TEST?=0
+MICROVM_CAP_TEST?=0
+INTERVM_TEST?=0
+IPC_TEST?=0
+REVOKE_TEST?=0
+DOS_GUARD_TEST?=0
+QUOTA_TEST?=0
+CAP_TYPE_TEST?=0
 
 ifeq ($(PANIC_TEST),1)
 CFLAGS += -DPANIC_TEST
@@ -136,6 +144,38 @@ ifeq ($(DRV_ISO_TEST),1)
 CFLAGS += -DDRV_ISO_TEST
 endif
 
+ifeq ($(MICROVM_TEST),1)
+CFLAGS += -DMICROVM_TEST
+endif
+
+ifeq ($(MICROVM_CAP_TEST),1)
+CFLAGS += -DMICROVM_CAP_TEST
+endif
+
+ifeq ($(INTERVM_TEST),1)
+CFLAGS += -DINTERVM_TEST
+endif
+
+ifeq ($(IPC_TEST),1)
+CFLAGS += -DIPC_TEST
+endif
+
+ifeq ($(REVOKE_TEST),1)
+CFLAGS += -DREVOKE_TEST
+endif
+
+ifeq ($(DOS_GUARD_TEST),1)
+CFLAGS += -DDOS_GUARD_TEST
+endif
+
+ifeq ($(QUOTA_TEST),1)
+CFLAGS += -DQUOTA_TEST
+endif
+
+ifeq ($(CAP_TYPE_TEST),1)
+CFLAGS += -DCAP_TYPE_TEST
+endif
+
 all: $(BUILD)/finde-os.iso
 
 $(BUILD):
@@ -194,6 +234,6 @@ $(BUILD)/finde-os.iso: $(BUILD)/kernel.elf boot/grub/grub.cfg
 	grub-mkrescue -o $(BUILD)/finde-os.iso $(ISO_DIR) >/dev/null
 
 clean:
-	rm -rf $(BUILD) log.txt boot_log.txt panic_log.txt idt_log.txt timer_log.txt heap_log.txt shell_log.txt keyboard_log.txt vm_log.txt pmm_log.txt vmm_log.txt pf_log.txt nx_log.txt vga_log.txt edit_log.txt cap_log.txt cap_enforce_log.txt syscall_log.txt syscall_deny_log.txt task_log.txt task_cap_log.txt cap_gen_log.txt usermode_log.txt user_task_log.txt user_task_deny_log.txt drv_iso_log.txt
+	rm -rf $(BUILD) log.txt boot_log.txt panic_log.txt idt_log.txt timer_log.txt heap_log.txt shell_log.txt keyboard_log.txt vm_log.txt pmm_log.txt vmm_log.txt pf_log.txt nx_log.txt vga_log.txt edit_log.txt cap_log.txt cap_enforce_log.txt syscall_log.txt syscall_deny_log.txt task_log.txt task_cap_log.txt cap_gen_log.txt usermode_log.txt user_task_log.txt user_task_deny_log.txt drv_iso_log.txt microvm_log.txt microvm_cap_log.txt intervm_log.txt ipc_log.txt revoke_log.txt dos_guard_log.txt quota_log.txt cap_type_log.txt
 
 .PHONY: all clean

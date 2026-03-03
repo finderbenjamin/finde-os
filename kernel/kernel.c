@@ -33,6 +33,11 @@ static uint64_t align_up_4k(uint64_t value) {
 
 
 
+
+
+
+
+
 #ifdef PMM_TEST
 static __attribute__((noreturn)) void pmm_test_fail(void) {
   serial_write("PMM_FAIL\n");
@@ -353,6 +358,7 @@ static int user_task_deny_sys_write(uint64_t handle, uint32_t pid, const char* m
 }
 #endif
 
+
 #ifdef DRV_ISO_TEST
 static __attribute__((noreturn)) void drv_iso_test_fail(void) {
   serial_write("DRV_ISO_FAIL\n");
@@ -373,6 +379,225 @@ static int drv_iso_mmio_write(uint64_t handle, uint32_t pid) {
   }
 
   return 1;
+}
+#endif
+
+
+#ifdef MICROVM_TEST
+static __attribute__((noreturn)) void microvm_test_fail(void) {
+  serial_write("MICROVM_FAIL\n");
+  panic("MICROVM_TEST");
+}
+
+static __attribute__((noreturn)) void microvm_test_halt_success(void) {
+  serial_write("MICROVM_OK\n");
+  __asm__ volatile ("cli");
+  for (;;) {
+    __asm__ volatile ("hlt");
+  }
+}
+
+typedef struct {
+  uint32_t vmid;
+  uint64_t io_cap;
+} microvm_test_vm_t;
+
+static int microvm_test_io_write(const microvm_test_vm_t* vm, uint32_t caller_vmid) {
+  if (cap_check(vm->io_cap, caller_vmid, CAP_R_WRITE) == 0) {
+    return 0;
+  }
+
+  return 1;
+}
+#endif
+
+#ifdef MICROVM_CAP_TEST
+static __attribute__((noreturn)) void microvm_cap_test_fail(void) {
+  serial_write("MICROVM_CAP_FAIL\n");
+  panic("MICROVM_CAP_TEST");
+}
+
+static __attribute__((noreturn)) void microvm_cap_test_halt_success(void) {
+  serial_write("MICROVM_CAP_OK\n");
+  __asm__ volatile ("cli");
+  for (;;) {
+    __asm__ volatile ("hlt");
+  }
+}
+
+typedef struct {
+  uint32_t vmid;
+  uint64_t write_cap;
+} microvm_cap_test_vm_t;
+
+static int microvm_cap_test_write(const microvm_cap_test_vm_t* target, uint32_t caller_vmid) {
+  if (cap_check(target->write_cap, caller_vmid, CAP_R_WRITE) == 0) {
+    return 0;
+  }
+
+  return 1;
+}
+#endif
+
+
+
+#ifdef INTERVM_TEST
+static __attribute__((noreturn)) void intervm_test_fail(void) {
+  serial_write("INTERVM_FAIL\n");
+  panic("INTERVM_TEST");
+}
+
+static __attribute__((noreturn)) void intervm_test_halt_success(void) {
+  serial_write("INTERVM_OK\n");
+  __asm__ volatile ("cli");
+  for (;;) {
+    __asm__ volatile ("hlt");
+  }
+}
+
+typedef struct {
+  uint32_t vmid;
+  uint64_t write_cap;
+} intervm_test_vm_t;
+
+static int intervm_test_write(const intervm_test_vm_t* target, uint32_t caller_vmid) {
+  if (cap_check(target->write_cap, caller_vmid, CAP_R_WRITE) == 0) {
+    return 0;
+  }
+
+  return 1;
+}
+#endif
+
+
+#ifdef IPC_TEST
+static __attribute__((noreturn)) void ipc_test_fail(void) {
+  serial_write("IPC_FAIL\n");
+  panic("IPC_TEST");
+}
+
+static __attribute__((noreturn)) void ipc_test_halt_success(void) {
+  serial_write("IPC_OK\n");
+  __asm__ volatile ("cli");
+  for (;;) {
+    __asm__ volatile ("hlt");
+  }
+}
+
+typedef struct {
+  uint32_t endpoint_id;
+  uint64_t send_cap;
+} ipc_test_endpoint_t;
+
+static int ipc_test_send(const ipc_test_endpoint_t* endpoint, uint32_t caller_id) {
+  if (cap_check(endpoint->send_cap, caller_id, CAP_R_WRITE) == 0) {
+    return 0;
+  }
+
+  return 1;
+}
+#endif
+
+
+#ifdef REVOKE_TEST
+static __attribute__((noreturn)) void revoke_test_fail(void) {
+  serial_write("REVOKE_FAIL\n");
+  panic("REVOKE_TEST");
+}
+
+static __attribute__((noreturn)) void revoke_test_halt_success(void) {
+  serial_write("REVOKE_OK\n");
+  __asm__ volatile ("cli");
+  for (;;) {
+    __asm__ volatile ("hlt");
+  }
+}
+#endif
+
+
+#ifdef DOS_GUARD_TEST
+static __attribute__((noreturn)) void dos_guard_test_fail(void) {
+  serial_write("DOS_GUARD_FAIL\n");
+  panic("DOS_GUARD_TEST");
+}
+
+static __attribute__((noreturn)) void dos_guard_test_halt_success(void) {
+  serial_write("DOS_GUARD_OK\n");
+  __asm__ volatile ("cli");
+  for (;;) {
+    __asm__ volatile ("hlt");
+  }
+}
+
+static uint32_t dos_guard_budget_remaining = 0u;
+
+static void dos_guard_reset_budget(uint32_t budget) {
+  dos_guard_budget_remaining = budget;
+}
+
+static int dos_guard_try_syscall(void) {
+  if (dos_guard_budget_remaining == 0u) {
+    return 0;
+  }
+
+  dos_guard_budget_remaining -= 1u;
+  return 1;
+}
+#endif
+
+
+#ifdef QUOTA_TEST
+static __attribute__((noreturn)) void quota_test_fail(void) {
+  serial_write("QUOTA_FAIL\n");
+  panic("QUOTA_TEST");
+}
+
+static __attribute__((noreturn)) void quota_test_halt_success(void) {
+  serial_write("QUOTA_OK\n");
+  __asm__ volatile ("cli");
+  for (;;) {
+    __asm__ volatile ("hlt");
+  }
+}
+
+typedef struct {
+  uint32_t pid;
+  uint32_t max_handles;
+  uint32_t used_handles;
+} quota_test_task_t;
+
+static int quota_test_try_acquire(quota_test_task_t* task) {
+  if (task->used_handles >= task->max_handles) {
+    return 0;
+  }
+
+  task->used_handles += 1u;
+  return 1;
+}
+
+static int quota_test_release(quota_test_task_t* task) {
+  if (task->used_handles == 0u) {
+    return 0;
+  }
+
+  task->used_handles -= 1u;
+  return 1;
+}
+#endif
+
+
+#ifdef CAP_TYPE_TEST
+static __attribute__((noreturn)) void cap_type_test_fail(void) {
+  serial_write("CAP_TYPE_FAIL\n");
+  panic("CAP_TYPE_TEST");
+}
+
+static __attribute__((noreturn)) void cap_type_test_halt_success(void) {
+  serial_write("CAP_TYPE_OK\n");
+  __asm__ volatile ("cli");
+  for (;;) {
+    __asm__ volatile ("hlt");
+  }
 }
 #endif
 
@@ -569,6 +794,16 @@ void kernel_main(uint64_t mb_magic, uint64_t mb_info_addr) {
   cap_gen_test_halt_success();
 #endif
 
+
+
+
+
+
+
+
+
+
+
 #ifdef CAP_TEST
   serial_init();
   cap_init();
@@ -669,6 +904,7 @@ void kernel_main(uint64_t mb_magic, uint64_t mb_info_addr) {
   usermode_test_halt_success();
 #endif
 
+
 #ifdef DRV_ISO_TEST
   serial_init();
   cap_init();
@@ -696,6 +932,323 @@ void kernel_main(uint64_t mb_magic, uint64_t mb_info_addr) {
   }
 
   drv_iso_test_halt_success();
+#endif
+
+
+#ifdef MICROVM_TEST
+  serial_init();
+  cap_init();
+
+  microvm_test_vm_t vm_a;
+  vm_a.vmid = 41u;
+  vm_a.io_cap = cap_create(vm_a.vmid, CAP_R_WRITE);
+
+  microvm_test_vm_t vm_b;
+  vm_b.vmid = 42u;
+  vm_b.io_cap = cap_create(vm_b.vmid, CAP_R_WRITE);
+
+  if (vm_a.io_cap == 0 || vm_b.io_cap == 0) {
+    microvm_test_fail();
+  }
+
+  if (microvm_test_io_write(&vm_a, vm_a.vmid) != 1) {
+    microvm_test_fail();
+  }
+  if (microvm_test_io_write(&vm_b, vm_b.vmid) != 1) {
+    microvm_test_fail();
+  }
+
+  if (microvm_test_io_write(&vm_a, vm_b.vmid) != 0) {
+    microvm_test_fail();
+  }
+  if (microvm_test_io_write(&vm_b, vm_a.vmid) != 0) {
+    microvm_test_fail();
+  }
+
+  if (cap_destroy(vm_a.io_cap) != 1) {
+    microvm_test_fail();
+  }
+
+  if (microvm_test_io_write(&vm_a, vm_a.vmid) != 0) {
+    microvm_test_fail();
+  }
+
+  microvm_test_halt_success();
+#endif
+
+#ifdef MICROVM_CAP_TEST
+  serial_init();
+  cap_init();
+
+  microvm_cap_test_vm_t vm_a;
+  vm_a.vmid = 51u;
+  vm_a.write_cap = cap_create(vm_a.vmid, CAP_R_READ);
+
+  microvm_cap_test_vm_t vm_b;
+  vm_b.vmid = 52u;
+  vm_b.write_cap = cap_create(vm_b.vmid, CAP_R_WRITE);
+
+  if (vm_a.write_cap == 0 || vm_b.write_cap == 0) {
+    microvm_cap_test_fail();
+  }
+
+  if (microvm_cap_test_write(&vm_a, vm_a.vmid) != 0) {
+    microvm_cap_test_fail();
+  }
+  if (microvm_cap_test_write(&vm_b, vm_b.vmid) != 1) {
+    microvm_cap_test_fail();
+  }
+
+  if (microvm_cap_test_write(&vm_a, vm_b.vmid) != 0) {
+    microvm_cap_test_fail();
+  }
+  if (microvm_cap_test_write(&vm_b, vm_a.vmid) != 0) {
+    microvm_cap_test_fail();
+  }
+
+  if (cap_destroy(vm_b.write_cap) != 1) {
+    microvm_cap_test_fail();
+  }
+  if (microvm_cap_test_write(&vm_b, vm_b.vmid) != 0) {
+    microvm_cap_test_fail();
+  }
+
+  microvm_cap_test_halt_success();
+#endif
+
+
+
+#ifdef INTERVM_TEST
+  serial_init();
+  cap_init();
+
+  intervm_test_vm_t vm_a;
+  vm_a.vmid = 61u;
+  vm_a.write_cap = cap_create(vm_a.vmid, CAP_R_WRITE);
+
+  intervm_test_vm_t vm_b;
+  vm_b.vmid = 62u;
+  vm_b.write_cap = cap_create(vm_b.vmid, CAP_R_WRITE);
+
+  intervm_test_vm_t vm_c;
+  vm_c.vmid = 63u;
+  vm_c.write_cap = cap_create(vm_c.vmid, CAP_R_WRITE);
+
+  if (vm_a.write_cap == 0 || vm_b.write_cap == 0 || vm_c.write_cap == 0) {
+    intervm_test_fail();
+  }
+
+  if (intervm_test_write(&vm_a, vm_a.vmid) != 1 ||
+      intervm_test_write(&vm_b, vm_b.vmid) != 1 ||
+      intervm_test_write(&vm_c, vm_c.vmid) != 1) {
+    intervm_test_fail();
+  }
+
+  if (intervm_test_write(&vm_a, vm_b.vmid) != 0 ||
+      intervm_test_write(&vm_a, vm_c.vmid) != 0 ||
+      intervm_test_write(&vm_b, vm_a.vmid) != 0 ||
+      intervm_test_write(&vm_b, vm_c.vmid) != 0 ||
+      intervm_test_write(&vm_c, vm_a.vmid) != 0 ||
+      intervm_test_write(&vm_c, vm_b.vmid) != 0) {
+    intervm_test_fail();
+  }
+
+  if (cap_destroy(vm_c.write_cap) != 1) {
+    intervm_test_fail();
+  }
+
+  if (intervm_test_write(&vm_c, vm_c.vmid) != 0) {
+    intervm_test_fail();
+  }
+
+  intervm_test_halt_success();
+#endif
+
+
+#ifdef IPC_TEST
+  serial_init();
+  cap_init();
+
+  ipc_test_endpoint_t endpoint_a;
+  endpoint_a.endpoint_id = 71u;
+  endpoint_a.send_cap = cap_create(endpoint_a.endpoint_id, CAP_R_WRITE);
+
+  ipc_test_endpoint_t endpoint_b;
+  endpoint_b.endpoint_id = 72u;
+  endpoint_b.send_cap = cap_create(endpoint_b.endpoint_id, CAP_R_WRITE);
+
+  if (endpoint_a.send_cap == 0 || endpoint_b.send_cap == 0) {
+    ipc_test_fail();
+  }
+
+  if (ipc_test_send(&endpoint_a, endpoint_a.endpoint_id) != 1) {
+    ipc_test_fail();
+  }
+  if (ipc_test_send(&endpoint_b, endpoint_b.endpoint_id) != 1) {
+    ipc_test_fail();
+  }
+
+  if (ipc_test_send(&endpoint_a, endpoint_b.endpoint_id) != 0) {
+    ipc_test_fail();
+  }
+  if (ipc_test_send(&endpoint_b, endpoint_a.endpoint_id) != 0) {
+    ipc_test_fail();
+  }
+
+  if (cap_destroy(endpoint_b.send_cap) != 1) {
+    ipc_test_fail();
+  }
+
+  if (ipc_test_send(&endpoint_b, endpoint_b.endpoint_id) != 0) {
+    ipc_test_fail();
+  }
+
+  ipc_test_halt_success();
+#endif
+
+
+#ifdef REVOKE_TEST
+  serial_init();
+  cap_init();
+
+  const uint32_t owner_pid = 81u;
+  const uint64_t shared_cap = cap_create(owner_pid, CAP_R_WRITE);
+  if (shared_cap == 0) {
+    revoke_test_fail();
+  }
+
+  if (cap_check(shared_cap, owner_pid, CAP_R_WRITE) != 1) {
+    revoke_test_fail();
+  }
+
+  if (cap_destroy(shared_cap) != 1) {
+    revoke_test_fail();
+  }
+
+  if (cap_check(shared_cap, owner_pid, CAP_R_WRITE) != 0) {
+    revoke_test_fail();
+  }
+
+  if (cap_check(shared_cap, owner_pid, CAP_R_READ) != 0) {
+    revoke_test_fail();
+  }
+
+  revoke_test_halt_success();
+#endif
+
+#ifdef DOS_GUARD_TEST
+  serial_init();
+
+  dos_guard_reset_budget(3u);
+
+  if (dos_guard_try_syscall() != 1) {
+    dos_guard_test_fail();
+  }
+  if (dos_guard_try_syscall() != 1) {
+    dos_guard_test_fail();
+  }
+  if (dos_guard_try_syscall() != 1) {
+    dos_guard_test_fail();
+  }
+
+  if (dos_guard_try_syscall() != 0) {
+    dos_guard_test_fail();
+  }
+
+  dos_guard_reset_budget(1u);
+  if (dos_guard_try_syscall() != 1) {
+    dos_guard_test_fail();
+  }
+  if (dos_guard_try_syscall() != 0) {
+    dos_guard_test_fail();
+  }
+
+  dos_guard_test_halt_success();
+#endif
+
+#ifdef QUOTA_TEST
+  serial_init();
+
+  quota_test_task_t task_a;
+  task_a.pid = 91u;
+  task_a.max_handles = 2u;
+  task_a.used_handles = 0u;
+
+  quota_test_task_t task_b;
+  task_b.pid = 92u;
+  task_b.max_handles = 1u;
+  task_b.used_handles = 0u;
+
+  if (quota_test_try_acquire(&task_a) != 1 || quota_test_try_acquire(&task_a) != 1) {
+    quota_test_fail();
+  }
+  if (quota_test_try_acquire(&task_a) != 0) {
+    quota_test_fail();
+  }
+
+  if (quota_test_try_acquire(&task_b) != 1) {
+    quota_test_fail();
+  }
+  if (quota_test_try_acquire(&task_b) != 0) {
+    quota_test_fail();
+  }
+
+  if (quota_test_release(&task_a) != 1) {
+    quota_test_fail();
+  }
+  if (quota_test_try_acquire(&task_a) != 1) {
+    quota_test_fail();
+  }
+
+  if (quota_test_release(&task_b) != 1) {
+    quota_test_fail();
+  }
+  if (quota_test_release(&task_b) != 0) {
+    quota_test_fail();
+  }
+
+  quota_test_halt_success();
+#endif
+
+#ifdef CAP_TYPE_TEST
+  serial_init();
+  cap_init();
+
+  const uint32_t type_a = 101u;
+  const uint32_t type_b = 102u;
+
+  const uint64_t cap_a = cap_create(type_a, CAP_R_READ | CAP_R_WRITE);
+  const uint64_t cap_b = cap_create(type_b, CAP_R_READ);
+
+  if (cap_a == 0 || cap_b == 0) {
+    cap_type_test_fail();
+  }
+
+  if (cap_check(cap_a, type_a, CAP_R_READ) != 1) {
+    cap_type_test_fail();
+  }
+  if (cap_check(cap_a, type_a, CAP_R_WRITE) != 1) {
+    cap_type_test_fail();
+  }
+
+  if (cap_check(cap_a, type_b, CAP_R_READ) != 0) {
+    cap_type_test_fail();
+  }
+  if (cap_check(cap_b, type_a, CAP_R_READ) != 0) {
+    cap_type_test_fail();
+  }
+  if (cap_check(cap_b, type_b, CAP_R_WRITE) != 0) {
+    cap_type_test_fail();
+  }
+
+  if (cap_destroy(cap_a) != 1) {
+    cap_type_test_fail();
+  }
+  if (cap_check(cap_a, type_a, CAP_R_READ) != 0) {
+    cap_type_test_fail();
+  }
+
+  cap_type_test_halt_success();
 #endif
 
 #ifdef PMM_TEST
