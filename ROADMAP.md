@@ -35,3 +35,20 @@
 24) User task capability deny path test -> "USER_TASK_DENY_OK"
 
 25) User-space driver isolation smoke test -> "DRV_ISO_OK"
+
+26) Minimal MicroVM isolation smoke test -> "MICROVM_OK"
+
+27) MicroVM capability boundary test -> "MICROVM_CAP_OK"
+
+
+28) Inter-VM capability isolation test -> "INTERVM_OK"
+
+29) IPC capability channel test -> "IPC_OK"
+
+30) Capability revocation propagation test -> "REVOKE_OK"
+
+31) Syscall rate guard test -> "DOS_GUARD_OK"
+
+32) Process/task resource quota test -> "QUOTA_OK"
+
+33) Capability type isolation matrix test -> "CAP_TYPE_OK"
