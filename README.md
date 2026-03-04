@@ -9,3 +9,4 @@ qemu-system-x86_64 -cdrom build/finde-os.iso -serial stdio -display none
 ## Working with Codex
 - Agent operating rules: `AGENTS.md`
 - Milestone implementation flow: `docs/MILESTONE_PLAYBOOK.md`
+- CLI-Spezifikation (verbindlich): `docs/CLI_SPEC.md`
