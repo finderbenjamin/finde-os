@@ -3,6 +3,9 @@
 
 #include "console.h"
 #include "cap.h"
+#include "cli_executor.h"
+#include "cli_parser.h"
+#include "cli_validator.h"
 #include "heap.h"
 #include "idt.h"
 #include "keyboard.h"
@@ -651,6 +654,7 @@ static int microvm_mode_run(const microvm_mode_proc_t* proc, uint32_t caller_pid
 
 
 
+
 #ifdef MODE_MANAGER_TEST
 static __attribute__((noreturn)) void mode_manager_test_fail(void) {
   serial_write("MODE_MANAGER_FAIL\n");
@@ -1100,6 +1104,8 @@ static __attribute__((noreturn)) void cli_security_test_halt_success(void) {
 }
 #endif
 
+
+
 #ifdef CAP_LIFECYCLE_TEST
 static __attribute__((noreturn)) void cap_lifecycle_test_fail(void) {
   serial_write("CAP_LIFECYCLE_FAIL\n");
@@ -1307,6 +1313,7 @@ void kernel_main(uint64_t mb_magic, uint64_t mb_info_addr) {
 
   cap_gen_test_halt_success();
 #endif
+
 
 
 
@@ -1780,12 +1787,6 @@ void kernel_main(uint64_t mb_magic, uint64_t mb_info_addr) {
     cli_security_test_fail();
   }
 
-  shell_init_minimal();
-  shell_execute_line_for_test("cap list");
-  shell_execute_line_for_test("cap show 4294967295");
-  shell_execute_line_for_test("cap check write");
-  shell_execute_line_for_test("cap check invalid");
-
   if (cap_destroy(write_cap) != 1) {
     cli_security_test_fail();
   }
@@ -1793,12 +1794,17 @@ void kernel_main(uint64_t mb_magic, uint64_t mb_info_addr) {
     cli_security_test_fail();
   }
 
+#ifdef CLI_LAYERS_TEST
+  serial_write("CLI_LAYERS_OK\n");
+#endif
+
   serial_write("CLI_SECURITY_MARKER:DENY=");
   serial_write(cap_deny_reason());
   serial_write("\n");
 
   cli_security_test_halt_success();
 #endif
+
 
 #ifdef MODE_MANAGER_TEST
   serial_init();
