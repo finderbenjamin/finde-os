@@ -435,7 +435,7 @@ if ! tr -d '\r' < microvm_mode_log.txt | grep -Fq "MICROVM_MODE_OK"; then
   exit 1
 fi
 
-echo "[40/43] unified mode manager launch path check"
+echo "[40/44] unified mode manager launch path check"
 make clean
 make MODE_MANAGER_TEST=1
 run_qemu mode_manager_log.txt
@@ -445,7 +445,7 @@ if ! tr -d '\r' < mode_manager_log.txt | grep -Fq "MODE_MANAGER_OK"; then
   exit 1
 fi
 
-echo "[41/43] CLI security introspection check"
+echo "[41/44] CLI security introspection check"
 make clean
 make CLI_SECURITY_TEST=1
 run_qemu cli_security_log.txt
@@ -461,7 +461,7 @@ if ! tr -d '\r' < cli_security_log.txt | grep -Fq "CLI_SECURITY_MARKER:DENY=DENY
 fi
 
 
-echo "[42/43] CLI layered pipeline check"
+echo "[42/44] CLI layered pipeline check"
 make clean
 make CLI_LAYERS_TEST=1
 run_qemu cli_layers_log.txt
@@ -471,13 +471,34 @@ if ! tr -d '\r' < cli_layers_log.txt | grep -Fq "CLI_LAYERS_OK"; then
   exit 1
 fi
 
-echo "[43/43] CLI baseline pipeline check"
+echo "[43/44] CLI baseline pipeline check"
 make clean
 make CLI_BASE_TEST=1
 run_qemu cli_base_log.txt
 
 if ! tr -d '\r' < cli_base_log.txt | grep -Fq "CLI_BASE_OK"; then
   echo "Expected serial marker CLI_BASE_OK not found" >&2
+  exit 1
+fi
+
+
+echo "[44/44] CLI status command check"
+make clean
+make CLI_STATUS_TEST=1
+run_qemu cli_status_log.txt
+
+if ! tr -d '\r' < cli_status_log.txt | grep -Fq "CLI_STATUS_OK"; then
+  echo "Expected serial marker CLI_STATUS_OK not found" >&2
+  exit 1
+fi
+
+if ! tr -d '\r' < cli_status_log.txt | grep -Fq "CLI_STATUS_MARKER:SANDBOX=STATUS mode=sandbox"; then
+  echo "Expected sandbox status marker not found" >&2
+  exit 1
+fi
+
+if ! tr -d '\r' < cli_status_log.txt | grep -Fq "CLI_STATUS_MARKER:MICROVM=STATUS mode=microvm"; then
+  echo "Expected microvm status marker not found" >&2
   exit 1
 fi
 

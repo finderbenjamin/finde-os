@@ -9,6 +9,7 @@
 typedef enum {
   CLI_AST_EMPTY = 0,
   CLI_AST_HELP,
+  CLI_AST_STATUS,
   CLI_AST_TICKS,
   CLI_AST_MALLOC,
   CLI_AST_CAP_LIST,

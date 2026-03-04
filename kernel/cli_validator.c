@@ -50,6 +50,7 @@ int cli_validate_ast(const cli_ast_t* ast, cli_mode_t mode, cli_validated_comman
   out->status = CLI_VALIDATE_OK;
   out->reason = "OK";
   out->handle = 0;
+  out->mode = mode;
 
   if (ast->kind == CLI_AST_EMPTY) {
     return 1;

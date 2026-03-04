@@ -75,6 +75,11 @@ int cli_parse_line(const char* line, cli_parse_buffer_t* buffer, cli_ast_t* ast_
     return 1;
   }
 
+  if (streq(buffer->tokens[0], "status")) {
+    ast_out->kind = CLI_AST_STATUS;
+    return 1;
+  }
+
   if (streq(buffer->tokens[0], "ticks")) {
     ast_out->kind = CLI_AST_TICKS;
     return 1;
