@@ -62,3 +62,5 @@
 37) User-mode/driver path hardening (crash isolation + clear exit reasons) test -> "USERMODE_PATH_OK"
 
 38) MicroVM golden security mode boundary + mode-switch reliability test -> "MICROVM_MODE_OK"
+
+39) Unified mode manager (policy->sandbox/microvm path + clear deny reasons) test -> "MODE_MANAGER_OK"

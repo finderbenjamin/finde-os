@@ -47,6 +47,7 @@ IPC_PLATFORM_TEST?=0
 LIMITS_TEST?=0
 USERMODE_PATH_TEST?=0
 MICROVM_MODE_TEST?=0
+MODE_MANAGER_TEST?=0
 
 ifeq ($(PANIC_TEST),1)
 CFLAGS += -DPANIC_TEST
@@ -201,6 +202,10 @@ ifeq ($(MICROVM_MODE_TEST),1)
 CFLAGS += -DMICROVM_MODE_TEST
 endif
 
+ifeq ($(MODE_MANAGER_TEST),1)
+CFLAGS += -DMODE_MANAGER_TEST
+endif
+
 all: $(BUILD)/finde-os.iso
 
 $(BUILD):
@@ -259,6 +264,6 @@ $(BUILD)/finde-os.iso: $(BUILD)/kernel.elf boot/grub/grub.cfg
 	grub-mkrescue -o $(BUILD)/finde-os.iso $(ISO_DIR) >/dev/null
 
 clean:
-	rm -rf $(BUILD) log.txt boot_log.txt panic_log.txt idt_log.txt timer_log.txt heap_log.txt shell_log.txt keyboard_log.txt vm_log.txt pmm_log.txt vmm_log.txt pf_log.txt nx_log.txt vga_log.txt edit_log.txt cap_log.txt cap_enforce_log.txt syscall_log.txt syscall_deny_log.txt task_log.txt task_cap_log.txt cap_gen_log.txt usermode_log.txt user_task_log.txt user_task_deny_log.txt drv_iso_log.txt microvm_log.txt microvm_cap_log.txt intervm_log.txt ipc_log.txt revoke_log.txt dos_guard_log.txt quota_log.txt cap_type_log.txt cap_lifecycle_log.txt ipc_platform_log.txt limits_log.txt usermode_path_log.txt microvm_mode_log.txt
+	rm -rf $(BUILD) log.txt boot_log.txt panic_log.txt idt_log.txt timer_log.txt heap_log.txt shell_log.txt keyboard_log.txt vm_log.txt pmm_log.txt vmm_log.txt pf_log.txt nx_log.txt vga_log.txt edit_log.txt cap_log.txt cap_enforce_log.txt syscall_log.txt syscall_deny_log.txt task_log.txt task_cap_log.txt cap_gen_log.txt usermode_log.txt user_task_log.txt user_task_deny_log.txt drv_iso_log.txt microvm_log.txt microvm_cap_log.txt intervm_log.txt ipc_log.txt revoke_log.txt dos_guard_log.txt quota_log.txt cap_type_log.txt cap_lifecycle_log.txt ipc_platform_log.txt limits_log.txt usermode_path_log.txt microvm_mode_log.txt mode_manager_log.txt
 
 .PHONY: all clean

@@ -650,6 +650,120 @@ static int microvm_mode_run(const microvm_mode_proc_t* proc, uint32_t caller_pid
 #endif
 
 
+
+#ifdef MODE_MANAGER_TEST
+static __attribute__((noreturn)) void mode_manager_test_fail(void) {
+  serial_write("MODE_MANAGER_FAIL\n");
+  panic("MODE_MANAGER_TEST");
+}
+
+static __attribute__((noreturn)) void mode_manager_test_halt_success(void) {
+  serial_write("MODE_MANAGER_OK\n");
+  __asm__ volatile ("cli");
+  for (;;) {
+    __asm__ volatile ("hlt");
+  }
+}
+
+enum {
+  APP_POLICY_NORMAL = 0u,
+  APP_POLICY_HIGH_ISOLATION = 1u,
+};
+
+enum {
+  APP_MODE_SANDBOX = 0u,
+  APP_MODE_MICROVM = 1u,
+};
+
+enum {
+  MODE_EXIT_OK = 0u,
+  MODE_EXIT_DENIED_POLICY = 1u,
+  MODE_EXIT_DENIED_BOUNDARY = 2u,
+  MODE_EXIT_DENIED_STALE_CAP = 3u,
+};
+
+typedef struct {
+  uint32_t app_id;
+  uint32_t policy;
+  uint32_t mode;
+  uint64_t sandbox_cap;
+  uint64_t microvm_cap;
+} mode_manager_app_t;
+
+typedef struct {
+  uint32_t last_mode;
+  uint32_t last_exit_reason;
+  uint32_t deny_count;
+} mode_manager_telemetry_t;
+
+static int mode_manager_string_eq(const char* a, const char* b) {
+  while (*a != '\0' && *b != '\0') {
+    if (*a != *b) {
+      return 0;
+    }
+    ++a;
+    ++b;
+  }
+  return *a == '\0' && *b == '\0';
+}
+
+static const char* mode_manager_exit_reason_text(uint32_t reason) {
+  if (reason == MODE_EXIT_OK) {
+    return "EXIT_OK";
+  }
+  if (reason == MODE_EXIT_DENIED_POLICY) {
+    return "EXIT_DENIED_POLICY";
+  }
+  if (reason == MODE_EXIT_DENIED_BOUNDARY) {
+    return "EXIT_DENIED_BOUNDARY";
+  }
+  if (reason == MODE_EXIT_DENIED_STALE_CAP) {
+    return "EXIT_DENIED_STALE_CAP";
+  }
+  return "EXIT_UNKNOWN";
+}
+
+static int mode_manager_select_and_launch(mode_manager_app_t* app, uint32_t caller_id,
+                                          mode_manager_telemetry_t* telemetry) {
+  if (app->policy == APP_POLICY_HIGH_ISOLATION) {
+    if (cap_check(app->microvm_cap, app->app_id, CAP_R_WRITE) == 0) {
+      telemetry->deny_count += 1u;
+      telemetry->last_exit_reason = MODE_EXIT_DENIED_STALE_CAP;
+      return 0;
+    }
+
+    if (cap_check(app->microvm_cap, caller_id, CAP_R_WRITE) == 0) {
+      telemetry->deny_count += 1u;
+      telemetry->last_exit_reason = MODE_EXIT_DENIED_BOUNDARY;
+      return 0;
+    }
+
+    app->mode = APP_MODE_MICROVM;
+    telemetry->last_mode = APP_MODE_MICROVM;
+    telemetry->last_exit_reason = MODE_EXIT_OK;
+    return 1;
+  }
+
+  if (app->policy == APP_POLICY_NORMAL) {
+    if (cap_check(app->sandbox_cap, caller_id, CAP_R_READ) == 0) {
+      telemetry->deny_count += 1u;
+      telemetry->last_exit_reason = MODE_EXIT_DENIED_BOUNDARY;
+      return 0;
+    }
+
+    app->mode = APP_MODE_SANDBOX;
+    telemetry->last_mode = APP_MODE_SANDBOX;
+    telemetry->last_exit_reason = MODE_EXIT_OK;
+    return 1;
+  }
+
+  telemetry->deny_count += 1u;
+  telemetry->last_exit_reason = MODE_EXIT_DENIED_POLICY;
+  return 0;
+}
+#endif
+
+
 #ifdef INTERVM_TEST
 static __attribute__((noreturn)) void intervm_test_fail(void) {
   serial_write("INTERVM_FAIL\n");
@@ -1629,6 +1743,81 @@ void kernel_main(uint64_t mb_magic, uint64_t mb_info_addr) {
   }
 
   microvm_mode_test_halt_success();
+#endif
+
+
+#ifdef MODE_MANAGER_TEST
+  serial_init();
+  cap_init();
+
+  mode_manager_app_t normal_app;
+  normal_app.app_id = 221u;
+  normal_app.policy = APP_POLICY_NORMAL;
+  normal_app.mode = APP_MODE_SANDBOX;
+  normal_app.sandbox_cap = cap_create(normal_app.app_id, CAP_R_READ);
+  normal_app.microvm_cap = cap_create(normal_app.app_id, CAP_R_WRITE);
+
+  mode_manager_app_t isolated_app;
+  isolated_app.app_id = 222u;
+  isolated_app.policy = APP_POLICY_HIGH_ISOLATION;
+  isolated_app.mode = APP_MODE_SANDBOX;
+  isolated_app.sandbox_cap = cap_create(isolated_app.app_id, CAP_R_READ);
+  isolated_app.microvm_cap = cap_create(isolated_app.app_id, CAP_R_WRITE);
+
+  if (normal_app.sandbox_cap == 0 || normal_app.microvm_cap == 0 ||
+      isolated_app.sandbox_cap == 0 || isolated_app.microvm_cap == 0) {
+    mode_manager_test_fail();
+  }
+
+  mode_manager_telemetry_t telemetry;
+  telemetry.last_mode = APP_MODE_SANDBOX;
+  telemetry.last_exit_reason = MODE_EXIT_OK;
+  telemetry.deny_count = 0u;
+
+  if (mode_manager_select_and_launch(&normal_app, normal_app.app_id, &telemetry) != 1) {
+    mode_manager_test_fail();
+  }
+  if (normal_app.mode != APP_MODE_SANDBOX || telemetry.last_mode != APP_MODE_SANDBOX) {
+    mode_manager_test_fail();
+  }
+
+  if (mode_manager_select_and_launch(&isolated_app, isolated_app.app_id, &telemetry) != 1) {
+    mode_manager_test_fail();
+  }
+  if (isolated_app.mode != APP_MODE_MICROVM || telemetry.last_mode != APP_MODE_MICROVM) {
+    mode_manager_test_fail();
+  }
+
+  if (mode_manager_select_and_launch(&isolated_app, normal_app.app_id, &telemetry) != 0) {
+    mode_manager_test_fail();
+  }
+  if (mode_manager_string_eq(mode_manager_exit_reason_text(telemetry.last_exit_reason), "EXIT_DENIED_BOUNDARY") != 1) {
+    mode_manager_test_fail();
+  }
+
+  if (cap_destroy(isolated_app.microvm_cap) != 1) {
+    mode_manager_test_fail();
+  }
+  if (mode_manager_select_and_launch(&isolated_app, isolated_app.app_id, &telemetry) != 0) {
+    mode_manager_test_fail();
+  }
+  if (mode_manager_string_eq(mode_manager_exit_reason_text(telemetry.last_exit_reason), "EXIT_DENIED_STALE_CAP") != 1) {
+    mode_manager_test_fail();
+  }
+
+  normal_app.policy = 9u;
+  if (mode_manager_select_and_launch(&normal_app, normal_app.app_id, &telemetry) != 0) {
+    mode_manager_test_fail();
+  }
+  if (mode_manager_string_eq(mode_manager_exit_reason_text(telemetry.last_exit_reason), "EXIT_DENIED_POLICY") != 1) {
+    mode_manager_test_fail();
+  }
+
+  if (telemetry.deny_count < 3u) {
+    mode_manager_test_fail();
+  }
+
+  mode_manager_test_halt_success();
 #endif
 
 
