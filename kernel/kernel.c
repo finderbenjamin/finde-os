@@ -383,6 +383,99 @@ static int drv_iso_mmio_write(uint64_t handle, uint32_t pid) {
 #endif
 
 
+
+
+
+#ifdef USERMODE_PATH_TEST
+static __attribute__((noreturn)) void usermode_path_test_fail(void) {
+  serial_write("USERMODE_PATH_FAIL\n");
+  panic("USERMODE_PATH_TEST");
+}
+
+static __attribute__((noreturn)) void usermode_path_test_halt_success(void) {
+  serial_write("USERMODE_PATH_OK\n");
+  __asm__ volatile ("cli");
+  for (;;) {
+    __asm__ volatile ("hlt");
+  }
+}
+
+enum {
+  USERMODE_EXIT_OK = 0u,
+  USERMODE_EXIT_DENIED = 1u,
+  USERMODE_EXIT_STALE_CAP = 2u,
+  USERMODE_EXIT_CRASH_ISOLATED = 3u,
+};
+
+typedef struct {
+  uint32_t pid;
+  uint64_t write_cap;
+  uint32_t crashed;
+} usermode_path_proc_t;
+
+typedef struct {
+  uint32_t last_exit_reason;
+  uint32_t deny_count;
+} usermode_path_telemetry_t;
+
+static int usermode_path_string_eq(const char* a, const char* b) {
+  while (*a != '\0' && *b != '\0') {
+    if (*a != *b) {
+      return 0;
+    }
+    ++a;
+    ++b;
+  }
+  return *a == '\0' && *b == '\0';
+}
+
+static const char* usermode_path_exit_reason_text(uint32_t reason) {
+  if (reason == USERMODE_EXIT_OK) {
+    return "EXIT_OK";
+  }
+  if (reason == USERMODE_EXIT_DENIED) {
+    return "EXIT_DENIED_CAPABILITY";
+  }
+  if (reason == USERMODE_EXIT_STALE_CAP) {
+    return "EXIT_STALE_CAPABILITY";
+  }
+  if (reason == USERMODE_EXIT_CRASH_ISOLATED) {
+    return "EXIT_CRASH_ISOLATED";
+  }
+  return "EXIT_UNKNOWN";
+}
+
+static int usermode_path_try_write(const usermode_path_proc_t* proc, uint32_t caller_pid,
+                                   usermode_path_telemetry_t* telemetry) {
+  if (cap_check(proc->write_cap, caller_pid, CAP_R_WRITE) == 0) {
+    telemetry->deny_count += 1u;
+    telemetry->last_exit_reason = USERMODE_EXIT_DENIED;
+    return 0;
+  }
+
+  telemetry->last_exit_reason = USERMODE_EXIT_OK;
+  return 1;
+}
+
+static int usermode_path_try_after_revoke(const usermode_path_proc_t* proc,
+                                          usermode_path_telemetry_t* telemetry) {
+  if (cap_check(proc->write_cap, proc->pid, CAP_R_WRITE) == 0) {
+    telemetry->deny_count += 1u;
+    telemetry->last_exit_reason = USERMODE_EXIT_STALE_CAP;
+    return 0;
+  }
+
+  telemetry->last_exit_reason = USERMODE_EXIT_OK;
+  return 1;
+}
+
+static void usermode_path_mark_crash(usermode_path_proc_t* proc,
+                                     usermode_path_telemetry_t* telemetry) {
+  proc->crashed = 1u;
+  telemetry->last_exit_reason = USERMODE_EXIT_CRASH_ISOLATED;
+}
+#endif
+
 #ifdef MICROVM_TEST
 static __attribute__((noreturn)) void microvm_test_fail(void) {
   serial_write("MICROVM_FAIL\n");
@@ -439,6 +532,122 @@ static int microvm_cap_test_write(const microvm_cap_test_vm_t* target, uint32_t 
 }
 #endif
 
+
+
+
+#ifdef MICROVM_MODE_TEST
+static __attribute__((noreturn)) void microvm_mode_test_fail(void) {
+  serial_write("MICROVM_MODE_FAIL\n");
+  panic("MICROVM_MODE_TEST");
+}
+
+static __attribute__((noreturn)) void microvm_mode_test_halt_success(void) {
+  serial_write("MICROVM_MODE_OK\n");
+  __asm__ volatile ("cli");
+  for (;;) {
+    __asm__ volatile ("hlt");
+  }
+}
+
+enum {
+  MICROVM_MODE_SANDBOX = 0u,
+  MICROVM_MODE_FULL = 1u,
+};
+
+enum {
+  MICROVM_MODE_EXIT_OK = 0u,
+  MICROVM_MODE_EXIT_SWITCH_DENIED = 1u,
+  MICROVM_MODE_EXIT_BOUNDARY_DENIED = 2u,
+  MICROVM_MODE_EXIT_STALE_CAP = 3u,
+};
+
+typedef struct {
+  uint32_t pid;
+  uint64_t sandbox_cap;
+  uint64_t microvm_cap;
+  uint32_t mode;
+} microvm_mode_proc_t;
+
+typedef struct {
+  uint32_t last_mode;
+  uint32_t last_exit_reason;
+  uint32_t deny_count;
+  uint32_t switch_count;
+} microvm_mode_telemetry_t;
+
+static int microvm_mode_string_eq(const char* a, const char* b) {
+  while (*a != '\0' && *b != '\0') {
+    if (*a != *b) {
+      return 0;
+    }
+    ++a;
+    ++b;
+  }
+  return *a == '\0' && *b == '\0';
+}
+
+static const char* microvm_mode_exit_reason_text(uint32_t reason) {
+  if (reason == MICROVM_MODE_EXIT_OK) {
+    return "MODE_OK";
+  }
+  if (reason == MICROVM_MODE_EXIT_SWITCH_DENIED) {
+    return "MODE_SWITCH_DENIED";
+  }
+  if (reason == MICROVM_MODE_EXIT_BOUNDARY_DENIED) {
+    return "MODE_BOUNDARY_DENIED";
+  }
+  if (reason == MICROVM_MODE_EXIT_STALE_CAP) {
+    return "MODE_STALE_CAP";
+  }
+  return "MODE_UNKNOWN";
+}
+
+static int microvm_mode_switch(microvm_mode_proc_t* proc, uint32_t target_mode,
+                               microvm_mode_telemetry_t* telemetry) {
+  if (target_mode == MICROVM_MODE_FULL && cap_check(proc->microvm_cap, proc->pid, CAP_R_WRITE) == 0) {
+    telemetry->deny_count += 1u;
+    telemetry->last_exit_reason = MICROVM_MODE_EXIT_SWITCH_DENIED;
+    return 0;
+  }
+
+  proc->mode = target_mode;
+  telemetry->switch_count += 1u;
+  telemetry->last_mode = target_mode;
+  telemetry->last_exit_reason = MICROVM_MODE_EXIT_OK;
+  return 1;
+}
+
+static int microvm_mode_run(const microvm_mode_proc_t* proc, uint32_t caller_pid,
+                            microvm_mode_telemetry_t* telemetry) {
+  if (proc->mode == MICROVM_MODE_SANDBOX) {
+    if (cap_check(proc->sandbox_cap, caller_pid, CAP_R_READ) == 0) {
+      telemetry->deny_count += 1u;
+      telemetry->last_exit_reason = MICROVM_MODE_EXIT_BOUNDARY_DENIED;
+      return 0;
+    }
+
+    telemetry->last_mode = MICROVM_MODE_SANDBOX;
+    telemetry->last_exit_reason = MICROVM_MODE_EXIT_OK;
+    return 1;
+  }
+
+  if (cap_check(proc->microvm_cap, proc->pid, CAP_R_WRITE) == 0) {
+    telemetry->deny_count += 1u;
+    telemetry->last_exit_reason = MICROVM_MODE_EXIT_STALE_CAP;
+    return 0;
+  }
+
+  if (cap_check(proc->microvm_cap, caller_pid, CAP_R_WRITE) == 0) {
+    telemetry->deny_count += 1u;
+    telemetry->last_exit_reason = MICROVM_MODE_EXIT_BOUNDARY_DENIED;
+    return 0;
+  }
+
+  telemetry->last_mode = MICROVM_MODE_FULL;
+  telemetry->last_exit_reason = MICROVM_MODE_EXIT_OK;
+  return 1;
+}
+#endif
 
 
 #ifdef INTERVM_TEST
@@ -498,6 +707,64 @@ static int ipc_test_send(const ipc_test_endpoint_t* endpoint, uint32_t caller_id
 }
 #endif
 
+
+#ifdef IPC_PLATFORM_TEST
+static __attribute__((noreturn)) void ipc_platform_test_fail(void) {
+  serial_write("IPC_PLATFORM_FAIL\n");
+  panic("IPC_PLATFORM_TEST");
+}
+
+static __attribute__((noreturn)) void ipc_platform_test_halt_success(void) {
+  serial_write("IPC_PLATFORM_OK\n");
+  __asm__ volatile ("cli");
+  for (;;) {
+    __asm__ volatile ("hlt");
+  }
+}
+
+typedef struct {
+  uint32_t owner_vmid;
+  uint32_t max_depth;
+  uint32_t depth;
+  uint32_t timeout_budget;
+} ipc_platform_channel_t;
+
+static int ipc_platform_send(ipc_platform_channel_t* channel, uint64_t send_cap, uint32_t caller_vmid) {
+  if (cap_check(send_cap, caller_vmid, CAP_R_WRITE) == 0) {
+    return 0;
+  }
+
+  if (caller_vmid != channel->owner_vmid) {
+    return 0;
+  }
+
+  if (channel->timeout_budget == 0u) {
+    return 0;
+  }
+
+  channel->timeout_budget -= 1u;
+
+  if (channel->depth >= channel->max_depth) {
+    return 0;
+  }
+
+  channel->depth += 1u;
+  return 1;
+}
+
+static int ipc_platform_drain_one(ipc_platform_channel_t* channel, uint32_t caller_vmid) {
+  if (caller_vmid != channel->owner_vmid) {
+    return 0;
+  }
+
+  if (channel->depth == 0u) {
+    return 0;
+  }
+
+  channel->depth -= 1u;
+  return 1;
+}
+#endif
 
 #ifdef REVOKE_TEST
 static __attribute__((noreturn)) void revoke_test_fail(void) {
@@ -586,6 +853,109 @@ static int quota_test_release(quota_test_task_t* task) {
 #endif
 
 
+
+#ifdef LIMITS_TEST
+static __attribute__((noreturn)) void limits_test_fail(void) {
+  serial_write("LIMITS_FAIL\n");
+  panic("LIMITS_TEST");
+}
+
+static __attribute__((noreturn)) void limits_test_halt_success(void) {
+  serial_write("LIMITS_OK\n");
+  __asm__ volatile ("cli");
+  for (;;) {
+    __asm__ volatile ("hlt");
+  }
+}
+
+enum {
+  LIMITS_ERR_NONE = 0u,
+  LIMITS_ERR_RATE_LIMIT = 1u,
+  LIMITS_ERR_QUOTA_LIMIT = 2u,
+  LIMITS_ERR_QUOTA_UNDERFLOW = 3u,
+};
+
+typedef struct {
+  uint32_t budget_remaining;
+  uint32_t denied_count;
+  uint32_t last_error;
+} limits_rate_guard_t;
+
+typedef struct {
+  uint32_t pid;
+  uint32_t max_handles;
+  uint32_t used_handles;
+  uint32_t denied_count;
+  uint32_t last_error;
+} limits_quota_task_t;
+
+static const char* limits_error_message(uint32_t error_code) {
+  if (error_code == LIMITS_ERR_RATE_LIMIT) {
+    return "DENY: rate limit exceeded";
+  }
+  if (error_code == LIMITS_ERR_QUOTA_LIMIT) {
+    return "DENY: quota exceeded";
+  }
+  if (error_code == LIMITS_ERR_QUOTA_UNDERFLOW) {
+    return "DENY: quota release underflow";
+  }
+  return "OK";
+}
+
+static int limits_string_eq(const char* a, const char* b) {
+  while (*a != '\0' && *b != '\0') {
+    if (*a != *b) {
+      return 0;
+    }
+    ++a;
+    ++b;
+  }
+  return *a == '\0' && *b == '\0';
+}
+
+static void limits_rate_guard_reset(limits_rate_guard_t* guard, uint32_t budget) {
+  guard->budget_remaining = budget;
+  guard->denied_count = 0u;
+  guard->last_error = LIMITS_ERR_NONE;
+}
+
+static int limits_rate_guard_try(limits_rate_guard_t* guard) {
+  if (guard->budget_remaining == 0u) {
+    guard->denied_count += 1u;
+    guard->last_error = LIMITS_ERR_RATE_LIMIT;
+    return 0;
+  }
+
+  guard->budget_remaining -= 1u;
+  guard->last_error = LIMITS_ERR_NONE;
+  return 1;
+}
+
+static int limits_quota_try_acquire(limits_quota_task_t* task) {
+  if (task->used_handles >= task->max_handles) {
+    task->denied_count += 1u;
+    task->last_error = LIMITS_ERR_QUOTA_LIMIT;
+    return 0;
+  }
+
+  task->used_handles += 1u;
+  task->last_error = LIMITS_ERR_NONE;
+  return 1;
+}
+
+static int limits_quota_release(limits_quota_task_t* task) {
+  if (task->used_handles == 0u) {
+    task->denied_count += 1u;
+    task->last_error = LIMITS_ERR_QUOTA_UNDERFLOW;
+    return 0;
+  }
+
+  task->used_handles -= 1u;
+  task->last_error = LIMITS_ERR_NONE;
+  return 1;
+}
+#endif
+
 #ifdef CAP_TYPE_TEST
 static __attribute__((noreturn)) void cap_type_test_fail(void) {
   serial_write("CAP_TYPE_FAIL\n");
@@ -594,6 +964,21 @@ static __attribute__((noreturn)) void cap_type_test_fail(void) {
 
 static __attribute__((noreturn)) void cap_type_test_halt_success(void) {
   serial_write("CAP_TYPE_OK\n");
+  __asm__ volatile ("cli");
+  for (;;) {
+    __asm__ volatile ("hlt");
+  }
+}
+#endif
+
+#ifdef CAP_LIFECYCLE_TEST
+static __attribute__((noreturn)) void cap_lifecycle_test_fail(void) {
+  serial_write("CAP_LIFECYCLE_FAIL\n");
+  panic("CAP_LIFECYCLE_TEST");
+}
+
+static __attribute__((noreturn)) void cap_lifecycle_test_halt_success(void) {
+  serial_write("CAP_LIFECYCLE_OK\n");
   __asm__ volatile ("cli");
   for (;;) {
     __asm__ volatile ("hlt");
@@ -804,6 +1189,79 @@ void kernel_main(uint64_t mb_magic, uint64_t mb_info_addr) {
 
 
 
+#ifdef CAP_LIFECYCLE_TEST
+  serial_init();
+  cap_init();
+
+  const uint32_t owner_type = 77u;
+  const uint64_t owner = cap_create(owner_type, CAP_R_READ | CAP_R_WRITE | CAP_R_EXEC);
+  if (owner == 0) {
+    cap_lifecycle_test_fail();
+  }
+
+  uint32_t audit_type = 0;
+  uint32_t audit_rights = 0;
+  uint32_t audit_generation = 0;
+  if (cap_audit(owner, &audit_type, &audit_rights, &audit_generation) != 1) {
+    cap_lifecycle_test_fail();
+  }
+  if (audit_type != owner_type) {
+    cap_lifecycle_test_fail();
+  }
+  if (audit_rights != (CAP_R_READ | CAP_R_WRITE | CAP_R_EXEC)) {
+    cap_lifecycle_test_fail();
+  }
+
+  const uint64_t delegated = cap_delegate(owner, CAP_R_READ | CAP_R_WRITE);
+  if (delegated == 0 || delegated == owner) {
+    cap_lifecycle_test_fail();
+  }
+
+  if (cap_check(delegated, owner_type, CAP_R_READ) != 1) {
+    cap_lifecycle_test_fail();
+  }
+  if (cap_check(delegated, owner_type, CAP_R_WRITE) != 1) {
+    cap_lifecycle_test_fail();
+  }
+  if (cap_check(delegated, owner_type, CAP_R_EXEC) != 0) {
+    cap_lifecycle_test_fail();
+  }
+
+  if (cap_delegate(owner, CAP_R_READ | CAP_R_WRITE | CAP_R_EXEC | (1u << 3)) != 0) {
+    cap_lifecycle_test_fail();
+  }
+
+  if (cap_destroy(owner) != 1) {
+    cap_lifecycle_test_fail();
+  }
+
+  if (cap_check(owner, owner_type, CAP_R_READ) != 0) {
+    cap_lifecycle_test_fail();
+  }
+  if (cap_delegate(owner, CAP_R_READ) != 0) {
+    cap_lifecycle_test_fail();
+  }
+
+  if (cap_check(delegated, owner_type, CAP_R_READ) != 1) {
+    cap_lifecycle_test_fail();
+  }
+  if (cap_audit(delegated, &audit_type, &audit_rights, 0) != 1) {
+    cap_lifecycle_test_fail();
+  }
+  if (audit_rights != (CAP_R_READ | CAP_R_WRITE)) {
+    cap_lifecycle_test_fail();
+  }
+
+  if (cap_destroy(delegated) != 1) {
+    cap_lifecycle_test_fail();
+  }
+  if (cap_audit(delegated, &audit_type, &audit_rights, &audit_generation) != 0) {
+    cap_lifecycle_test_fail();
+  }
+
+  cap_lifecycle_test_halt_success();
+#endif
+
 #ifdef CAP_TEST
   serial_init();
   cap_init();
@@ -935,6 +1393,84 @@ void kernel_main(uint64_t mb_magic, uint64_t mb_info_addr) {
 #endif
 
 
+
+
+
+
+
+#ifdef USERMODE_PATH_TEST
+  serial_init();
+  cap_init();
+
+  usermode_path_proc_t proc_a;
+  proc_a.pid = 201u;
+  proc_a.write_cap = cap_create(proc_a.pid, CAP_R_WRITE);
+  proc_a.crashed = 0u;
+
+  usermode_path_proc_t proc_b;
+  proc_b.pid = 202u;
+  proc_b.write_cap = cap_create(proc_b.pid, CAP_R_WRITE);
+  proc_b.crashed = 0u;
+
+  if (proc_a.write_cap == 0 || proc_b.write_cap == 0) {
+    usermode_path_test_fail();
+  }
+
+  usermode_path_telemetry_t telem;
+  telem.last_exit_reason = USERMODE_EXIT_OK;
+  telem.deny_count = 0u;
+
+  if (usermode_path_try_write(&proc_a, proc_a.pid, &telem) != 1) {
+    usermode_path_test_fail();
+  }
+  if (telem.last_exit_reason != USERMODE_EXIT_OK) {
+    usermode_path_test_fail();
+  }
+  if (usermode_path_string_eq(usermode_path_exit_reason_text(telem.last_exit_reason), "EXIT_OK") != 1) {
+    usermode_path_test_fail();
+  }
+
+  if (usermode_path_try_write(&proc_a, proc_b.pid, &telem) != 0) {
+    usermode_path_test_fail();
+  }
+  if (telem.last_exit_reason != USERMODE_EXIT_DENIED) {
+    usermode_path_test_fail();
+  }
+  if (usermode_path_string_eq(usermode_path_exit_reason_text(telem.last_exit_reason), "EXIT_DENIED_CAPABILITY") != 1) {
+    usermode_path_test_fail();
+  }
+
+  usermode_path_mark_crash(&proc_a, &telem);
+  if (proc_a.crashed != 1u || proc_b.crashed != 0u) {
+    usermode_path_test_fail();
+  }
+  if (usermode_path_try_write(&proc_b, proc_b.pid, &telem) != 1) {
+    usermode_path_test_fail();
+  }
+  if (telem.last_exit_reason != USERMODE_EXIT_OK) {
+    usermode_path_test_fail();
+  }
+
+  if (cap_destroy(proc_a.write_cap) != 1) {
+    usermode_path_test_fail();
+  }
+  if (usermode_path_try_after_revoke(&proc_a, &telem) != 0) {
+    usermode_path_test_fail();
+  }
+  if (telem.last_exit_reason != USERMODE_EXIT_STALE_CAP) {
+    usermode_path_test_fail();
+  }
+  if (usermode_path_string_eq(usermode_path_exit_reason_text(telem.last_exit_reason), "EXIT_STALE_CAPABILITY") != 1) {
+    usermode_path_test_fail();
+  }
+
+  if (usermode_path_string_eq(usermode_path_exit_reason_text(USERMODE_EXIT_CRASH_ISOLATED), "EXIT_CRASH_ISOLATED") != 1) {
+    usermode_path_test_fail();
+  }
+
+  usermode_path_test_halt_success();
+#endif
+
 #ifdef MICROVM_TEST
   serial_init();
   cap_init();
@@ -1016,6 +1552,84 @@ void kernel_main(uint64_t mb_magic, uint64_t mb_info_addr) {
   microvm_cap_test_halt_success();
 #endif
 
+
+
+#ifdef MICROVM_MODE_TEST
+  serial_init();
+  cap_init();
+
+  microvm_mode_proc_t proc_a;
+  proc_a.pid = 211u;
+  proc_a.sandbox_cap = cap_create(proc_a.pid, CAP_R_READ);
+  proc_a.microvm_cap = cap_create(proc_a.pid, CAP_R_WRITE);
+  proc_a.mode = MICROVM_MODE_SANDBOX;
+
+  microvm_mode_proc_t proc_b;
+  proc_b.pid = 212u;
+  proc_b.sandbox_cap = cap_create(proc_b.pid, CAP_R_READ);
+  proc_b.microvm_cap = cap_create(proc_b.pid, CAP_R_READ);
+  proc_b.mode = MICROVM_MODE_SANDBOX;
+
+  if (proc_a.sandbox_cap == 0 || proc_a.microvm_cap == 0 ||
+      proc_b.sandbox_cap == 0 || proc_b.microvm_cap == 0) {
+    microvm_mode_test_fail();
+  }
+
+  microvm_mode_telemetry_t telemetry;
+  telemetry.last_mode = MICROVM_MODE_SANDBOX;
+  telemetry.last_exit_reason = MICROVM_MODE_EXIT_OK;
+  telemetry.deny_count = 0u;
+  telemetry.switch_count = 0u;
+
+  if (microvm_mode_run(&proc_a, proc_a.pid, &telemetry) != 1) {
+    microvm_mode_test_fail();
+  }
+  if (microvm_mode_run(&proc_b, proc_b.pid, &telemetry) != 1) {
+    microvm_mode_test_fail();
+  }
+
+  if (microvm_mode_switch(&proc_a, MICROVM_MODE_FULL, &telemetry) != 1) {
+    microvm_mode_test_fail();
+  }
+  if (microvm_mode_run(&proc_a, proc_a.pid, &telemetry) != 1) {
+    microvm_mode_test_fail();
+  }
+  if (microvm_mode_run(&proc_a, proc_b.pid, &telemetry) != 0) {
+    microvm_mode_test_fail();
+  }
+  if (microvm_mode_string_eq(microvm_mode_exit_reason_text(telemetry.last_exit_reason), "MODE_BOUNDARY_DENIED") != 1) {
+    microvm_mode_test_fail();
+  }
+
+  if (microvm_mode_switch(&proc_b, MICROVM_MODE_FULL, &telemetry) != 0) {
+    microvm_mode_test_fail();
+  }
+  if (microvm_mode_string_eq(microvm_mode_exit_reason_text(telemetry.last_exit_reason), "MODE_SWITCH_DENIED") != 1) {
+    microvm_mode_test_fail();
+  }
+
+  if (cap_destroy(proc_a.microvm_cap) != 1) {
+    microvm_mode_test_fail();
+  }
+  if (microvm_mode_run(&proc_a, proc_a.pid, &telemetry) != 0) {
+    microvm_mode_test_fail();
+  }
+  if (microvm_mode_string_eq(microvm_mode_exit_reason_text(telemetry.last_exit_reason), "MODE_STALE_CAP") != 1) {
+    microvm_mode_test_fail();
+  }
+
+  if (microvm_mode_switch(&proc_a, MICROVM_MODE_SANDBOX, &telemetry) != 1) {
+    microvm_mode_test_fail();
+  }
+  if (microvm_mode_run(&proc_a, proc_a.pid, &telemetry) != 1) {
+    microvm_mode_test_fail();
+  }
+  if (telemetry.switch_count < 2u || telemetry.deny_count < 3u) {
+    microvm_mode_test_fail();
+  }
+
+  microvm_mode_test_halt_success();
+#endif
 
 
 #ifdef INTERVM_TEST
@@ -1106,6 +1720,83 @@ void kernel_main(uint64_t mb_magic, uint64_t mb_info_addr) {
   ipc_test_halt_success();
 #endif
 
+
+#ifdef IPC_PLATFORM_TEST
+  serial_init();
+  cap_init();
+
+  const uint32_t vm_owner = 141u;
+  const uint32_t vm_other = 142u;
+
+  const uint64_t owner_cap = cap_create(vm_owner, CAP_R_READ | CAP_R_WRITE);
+  const uint64_t delegated_cap = cap_delegate(owner_cap, CAP_R_WRITE);
+  const uint64_t foreign_cap = cap_create(vm_other, CAP_R_WRITE);
+  if (owner_cap == 0 || delegated_cap == 0 || foreign_cap == 0) {
+    ipc_platform_test_fail();
+  }
+
+  uint32_t audit_type = 0;
+  uint32_t audit_rights = 0;
+  if (cap_audit(delegated_cap, &audit_type, &audit_rights, 0) != 1) {
+    ipc_platform_test_fail();
+  }
+  if (audit_type != vm_owner || audit_rights != CAP_R_WRITE) {
+    ipc_platform_test_fail();
+  }
+
+  if (cap_check(delegated_cap, vm_other, CAP_R_WRITE) != 0) {
+    ipc_platform_test_fail();
+  }
+
+  ipc_platform_channel_t channel;
+  channel.owner_vmid = vm_owner;
+  channel.max_depth = 2u;
+  channel.depth = 0u;
+  channel.timeout_budget = 3u;
+
+  if (ipc_platform_send(&channel, delegated_cap, vm_owner) != 1) {
+    ipc_platform_test_fail();
+  }
+  if (ipc_platform_send(&channel, owner_cap, vm_owner) != 1) {
+    ipc_platform_test_fail();
+  }
+
+  if (ipc_platform_send(&channel, delegated_cap, vm_owner) != 0) {
+    ipc_platform_test_fail();
+  }
+
+  if (ipc_platform_send(&channel, foreign_cap, vm_other) != 0) {
+    ipc_platform_test_fail();
+  }
+
+  if (ipc_platform_drain_one(&channel, vm_other) != 0) {
+    ipc_platform_test_fail();
+  }
+  if (ipc_platform_drain_one(&channel, vm_owner) != 1) {
+    ipc_platform_test_fail();
+  }
+  if (channel.depth != 1u) {
+    ipc_platform_test_fail();
+  }
+
+  channel.depth = 0u;
+  channel.timeout_budget = 1u;
+  if (ipc_platform_send(&channel, delegated_cap, vm_owner) != 1) {
+    ipc_platform_test_fail();
+  }
+  if (ipc_platform_send(&channel, delegated_cap, vm_owner) != 0) {
+    ipc_platform_test_fail();
+  }
+
+  if (cap_destroy(delegated_cap) != 1) {
+    ipc_platform_test_fail();
+  }
+  if (ipc_platform_send(&channel, delegated_cap, vm_owner) != 0) {
+    ipc_platform_test_fail();
+  }
+
+  ipc_platform_test_halt_success();
+#endif
 
 #ifdef REVOKE_TEST
   serial_init();
@@ -1208,6 +1899,65 @@ void kernel_main(uint64_t mb_magic, uint64_t mb_info_addr) {
   }
 
   quota_test_halt_success();
+#endif
+
+
+#ifdef LIMITS_TEST
+  serial_init();
+
+  limits_rate_guard_t guard;
+  limits_rate_guard_reset(&guard, 2u);
+
+  if (limits_rate_guard_try(&guard) != 1) {
+    limits_test_fail();
+  }
+  if (limits_rate_guard_try(&guard) != 1) {
+    limits_test_fail();
+  }
+  if (limits_rate_guard_try(&guard) != 0) {
+    limits_test_fail();
+  }
+  if (guard.denied_count != 1u || guard.last_error != LIMITS_ERR_RATE_LIMIT) {
+    limits_test_fail();
+  }
+  if (limits_string_eq(limits_error_message(guard.last_error), "DENY: rate limit exceeded") != 1) {
+    limits_test_fail();
+  }
+
+  limits_quota_task_t task;
+  task.pid = 151u;
+  task.max_handles = 1u;
+  task.used_handles = 0u;
+  task.denied_count = 0u;
+  task.last_error = LIMITS_ERR_NONE;
+
+  if (limits_quota_try_acquire(&task) != 1) {
+    limits_test_fail();
+  }
+  if (limits_quota_try_acquire(&task) != 0) {
+    limits_test_fail();
+  }
+  if (task.denied_count != 1u || task.last_error != LIMITS_ERR_QUOTA_LIMIT) {
+    limits_test_fail();
+  }
+  if (limits_string_eq(limits_error_message(task.last_error), "DENY: quota exceeded") != 1) {
+    limits_test_fail();
+  }
+
+  if (limits_quota_release(&task) != 1) {
+    limits_test_fail();
+  }
+  if (limits_quota_release(&task) != 0) {
+    limits_test_fail();
+  }
+  if (task.denied_count != 2u || task.last_error != LIMITS_ERR_QUOTA_UNDERFLOW) {
+    limits_test_fail();
+  }
+  if (limits_string_eq(limits_error_message(task.last_error), "DENY: quota release underflow") != 1) {
+    limits_test_fail();
+  }
+
+  limits_test_halt_success();
 #endif
 
 #ifdef CAP_TYPE_TEST

@@ -52,3 +52,13 @@
 32) Process/task resource quota test -> "QUOTA_OK"
 
 33) Capability type isolation matrix test -> "CAP_TYPE_OK"
+
+34) Capability lifecycle create/delegate/revoke/audit test -> "CAP_LIFECYCLE_OK"
+
+35) IPC + Inter-VM robustness (error paths, timeout budget, backpressure, ownership) test -> "IPC_PLATFORM_OK"
+
+36) Resource/DoS telemetry + deny-reason clarity test -> "LIMITS_OK"
+
+37) User-mode/driver path hardening (crash isolation + clear exit reasons) test -> "USERMODE_PATH_OK"
+
+38) MicroVM golden security mode boundary + mode-switch reliability test -> "MICROVM_MODE_OK"

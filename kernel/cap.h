@@ -9,7 +9,9 @@
 
 void cap_init(void);
 uint64_t cap_create(uint32_t type, uint32_t rights);
+uint64_t cap_delegate(uint64_t source_handle, uint32_t delegated_rights);
 int cap_check(uint64_t handle, uint32_t expected_type, uint32_t required_rights);
+int cap_audit(uint64_t handle, uint32_t* type_out, uint32_t* rights_out, uint32_t* generation_out);
 int cap_destroy(uint64_t handle);
 
 #endif
