@@ -445,7 +445,7 @@ if ! tr -d '\r' < mode_manager_log.txt | grep -Fq "MODE_MANAGER_OK"; then
   exit 1
 fi
 
-echo "[41/41] CLI security introspection check"
+echo "[41/42] CLI security introspection check"
 make clean
 make CLI_SECURITY_TEST=1
 run_qemu cli_security_log.txt
@@ -457,6 +457,17 @@ fi
 
 if ! tr -d '\r' < cli_security_log.txt | grep -Fq "CLI_SECURITY_MARKER:DENY=DENY: capability security check failed"; then
   echo "Expected deterministic deny marker not found" >&2
+  exit 1
+fi
+
+
+echo "[42/42] CLI layered pipeline check"
+make clean
+make CLI_LAYERS_TEST=1
+run_qemu cli_layers_log.txt
+
+if ! tr -d '' < cli_layers_log.txt | grep -Fq "CLI_LAYERS_OK"; then
+  echo "Expected serial marker CLI_LAYERS_OK not found" >&2
   exit 1
 fi
 

@@ -3,6 +3,8 @@
 
 #include <stddef.h>
 
+#include "cli_validator.h"
+
 void shell_init(void);
 void shell_init_minimal(void);
 void shell_step(void);
@@ -12,5 +14,6 @@ const char* shell_current_line_for_test(void);
 size_t shell_cursor_for_test(void);
 
 void shell_execute_line_for_test(const char* line);
+void shell_set_mode_for_test(cli_mode_t mode);
 
 #endif

@@ -66,3 +66,5 @@
 39) Unified mode manager (policy->sandbox/microvm path + clear deny reasons) test -> "MODE_MANAGER_OK"
 
 40) CLI capability security introspection (cap list/show/check + unified deny reason + deterministic marker) test -> "CLI_SECURITY_OK"
+
+41) CLI parser/validator/executor layering with deny-path validation test -> "CLI_LAYERS_OK"
