@@ -21,7 +21,7 @@ run_qemu() {
   fi
 }
 
-echo "[1/34] normal boot check"
+echo "[1/40] normal boot check"
 make clean
 make
 run_qemu log.txt
@@ -31,7 +31,7 @@ if ! tr -d '\r' < log.txt | grep -Fq "IDT_OK"; then
   exit 1
 fi
 
-echo "[2/34] boot marker check"
+echo "[2/40] boot marker check"
 make clean
 make BOOT_TEST=1
 run_qemu boot_log.txt
@@ -41,7 +41,7 @@ if ! tr -d '\r' < boot_log.txt | grep -Fq "BOOT_OK"; then
   exit 1
 fi
 
-echo "[3/34] panic path check"
+echo "[3/40] panic path check"
 make clean
 make PANIC_TEST=1
 run_qemu panic_log.txt
@@ -51,7 +51,7 @@ if ! tr -d '\r' < panic_log.txt | grep -Fq "PANIC:"; then
   exit 1
 fi
 
-echo "[4/34] idt exception check"
+echo "[4/40] idt exception check"
 make clean
 make IDT_TEST=1
 run_qemu idt_log.txt
@@ -66,7 +66,7 @@ if ! tr -d '\r' < idt_log.txt | grep -Fq "EXC:4"; then
   exit 1
 fi
 
-echo "[5/34] timer interrupt check"
+echo "[5/40] timer interrupt check"
 make clean
 make TIMER_TEST=1
 run_qemu timer_log.txt
@@ -76,7 +76,7 @@ if ! tr -d '\r' < timer_log.txt | grep -Fq "TICK_OK"; then
   exit 1
 fi
 
-echo "[6/34] heap allocator check"
+echo "[6/40] heap allocator check"
 make clean
 make HEAP_TEST=1
 run_qemu heap_log.txt
@@ -86,7 +86,7 @@ if ! tr -d '\r' < heap_log.txt | grep -Fq "HEAP_OK"; then
   exit 1
 fi
 
-echo "[7/34] shell test check"
+echo "[7/40] shell test check"
 make clean
 make SHELL_TEST=1
 run_qemu shell_log.txt
@@ -96,7 +96,7 @@ if ! tr -d '\r' < shell_log.txt | grep -Fq "SHELL_OK"; then
   exit 1
 fi
 
-echo "[8/34] keyboard decoder check"
+echo "[8/40] keyboard decoder check"
 make clean
 make KEYBOARD_TEST=1
 run_qemu keyboard_log.txt
@@ -106,7 +106,7 @@ if ! tr -d '\r' < keyboard_log.txt | grep -Fq "KBD_OK"; then
   exit 1
 fi
 
-echo "[9/34] virtual memory stack check"
+echo "[9/40] virtual memory stack check"
 make clean
 make VM_TEST=1
 run_qemu vm_log.txt
@@ -116,7 +116,7 @@ if ! tr -d '\r' < vm_log.txt | grep -Fq "VM_OK"; then
   exit 1
 fi
 
-echo "[10/34] physical memory manager check"
+echo "[10/40] physical memory manager check"
 make clean
 make PMM_TEST=1
 run_qemu pmm_log.txt
@@ -126,7 +126,7 @@ if ! tr -d '\r' < pmm_log.txt | grep -Fq "PMM_OK"; then
   exit 1
 fi
 
-echo "[11/34] virtual memory mapping check"
+echo "[11/40] virtual memory mapping check"
 make clean
 make VMM_TEST=1
 run_qemu vmm_log.txt
@@ -136,7 +136,7 @@ if ! tr -d '\r' < vmm_log.txt | grep -Fq "VMM_OK"; then
   exit 1
 fi
 
-echo "[12/34] page fault handler check"
+echo "[12/40] page fault handler check"
 make clean
 make PF_TEST=1
 run_qemu pf_log.txt
@@ -146,7 +146,7 @@ if ! tr -d '\r' < pf_log.txt | grep -Fxq "PF_OK"; then
   exit 1
 fi
 
-echo "[13/34] nx execute protection check"
+echo "[13/40] nx execute protection check"
 make clean
 make NX_TEST=1
 run_qemu nx_log.txt
@@ -156,7 +156,7 @@ if ! tr -d '\r' < nx_log.txt | grep -Fxq "NX_OK"; then
   exit 1
 fi
 
-echo "[14/34] VGA console check"
+echo "[14/40] VGA console check"
 make clean
 make VGA_TEST=1
 run_qemu vga_log.txt
@@ -166,7 +166,7 @@ if ! tr -d '\r' < vga_log.txt | sed -E 's/\x1B\[[0-9;]*[[:alpha:]]//g' | grep -F
   exit 1
 fi
 
-echo "[15/34] shell line editing check"
+echo "[15/40] shell line editing check"
 make clean
 make EDIT_TEST=1
 run_qemu edit_log.txt
@@ -176,7 +176,7 @@ if ! tr -d '\r' < edit_log.txt | grep -Fxq "EDIT_OK"; then
   exit 1
 fi
 
-echo "[16/34] capability primitives check"
+echo "[16/40] capability primitives check"
 make clean
 make CAP_TEST=1
 run_qemu cap_log.txt
@@ -186,7 +186,7 @@ if ! tr -d '\r' < cap_log.txt | grep -Fq "CAP_OK"; then
   exit 1
 fi
 
-echo "[17/34] capability enforcement check"
+echo "[17/40] capability enforcement check"
 make clean
 make CAP_ENFORCE_TEST=1
 run_qemu cap_enforce_log.txt
@@ -197,7 +197,7 @@ if ! tr -d '\r' < cap_enforce_log.txt | grep -Fq "CAP_ENFORCE_OK"; then
 fi
 
 
-echo "[18/34] syscall capability gate check"
+echo "[18/40] syscall capability gate check"
 make clean
 make SYSCALL_TEST=1
 run_qemu syscall_log.txt
@@ -210,7 +210,7 @@ fi
 
 
 
-echo "[19/34] syscall deny path check"
+echo "[19/40] syscall deny path check"
 make clean
 make SYSCALL_DENY_TEST=1
 run_qemu syscall_deny_log.txt
@@ -220,7 +220,7 @@ if ! tr -d '\r' < syscall_deny_log.txt | grep -Fq "SYSCALL_DENY_OK"; then
   exit 1
 fi
 
-echo "[20/34] task scheduler check"
+echo "[20/40] task scheduler check"
 make clean
 make TASK_TEST=1
 run_qemu task_log.txt
@@ -231,7 +231,7 @@ if ! tr -d '\r' < task_log.txt | grep -Fq "TASK_OK"; then
 fi
 
 
-echo "[21/34] task capability isolation check"
+echo "[21/40] task capability isolation check"
 make clean
 make TASK_CAP_TEST=1
 run_qemu task_cap_log.txt
@@ -242,7 +242,7 @@ if ! tr -d '\r' < task_cap_log.txt | grep -Fq "TASK_CAP_OK"; then
 fi
 
 
-echo "[22/34] capability generation guard check"
+echo "[22/40] capability generation guard check"
 make clean
 make CAP_GEN_TEST=1
 run_qemu cap_gen_log.txt
@@ -254,7 +254,7 @@ fi
 
 
 
-echo "[23/34] user mode launch path check"
+echo "[23/40] user mode launch path check"
 make clean
 make USERMODE_TEST=1
 run_qemu usermode_log.txt
@@ -265,7 +265,7 @@ if ! tr -d '\r' < usermode_log.txt | grep -Fq "USERMODE_OK"; then
 fi
 
 
-echo "[24/34] user task capability path check"
+echo "[24/40] user task capability path check"
 make clean
 make USER_TASK_TEST=1
 run_qemu user_task_log.txt
@@ -276,7 +276,7 @@ if ! tr -d '\r' < user_task_log.txt | grep -Fq "USER_TASK_OK"; then
 fi
 
 
-echo "[25/34] user task capability deny path check"
+echo "[25/40] user task capability deny path check"
 make clean
 make USER_TASK_DENY_TEST=1
 run_qemu user_task_deny_log.txt
@@ -286,7 +286,7 @@ if ! tr -d '\r' < user_task_deny_log.txt | grep -Fq "USER_TASK_DENY_OK"; then
   exit 1
 fi
 
-echo "[26/34] user-space driver isolation check"
+echo "[26/40] user-space driver isolation check"
 make clean
 make DRV_ISO_TEST=1
 run_qemu drv_iso_log.txt
@@ -298,7 +298,7 @@ fi
 
 
 
-echo "[27/34] microvm isolation smoke check"
+echo "[27/40] microvm isolation smoke check"
 make clean
 make MICROVM_TEST=1
 run_qemu microvm_log.txt
@@ -309,7 +309,7 @@ if ! tr -d '\r' < microvm_log.txt | grep -Fq "MICROVM_OK"; then
 fi
 
 
-echo "[28/34] microvm capability boundary check"
+echo "[28/40] microvm capability boundary check"
 make clean
 make MICROVM_CAP_TEST=1
 run_qemu microvm_cap_log.txt
@@ -320,7 +320,7 @@ if ! tr -d '\r' < microvm_cap_log.txt | grep -Fq "MICROVM_CAP_OK"; then
 fi
 
 
-echo "[29/34] inter-vm capability isolation check"
+echo "[29/40] inter-vm capability isolation check"
 make clean
 make INTERVM_TEST=1
 run_qemu intervm_log.txt
@@ -331,7 +331,7 @@ if ! tr -d '\r' < intervm_log.txt | grep -Fq "INTERVM_OK"; then
 fi
 
 
-echo "[30/34] ipc capability channel check"
+echo "[30/40] ipc capability channel check"
 make clean
 make IPC_TEST=1
 run_qemu ipc_log.txt
@@ -342,7 +342,7 @@ if ! tr -d '\r' < ipc_log.txt | grep -Fq "IPC_OK"; then
 fi
 
 
-echo "[31/34] capability revocation propagation check"
+echo "[31/40] capability revocation propagation check"
 make clean
 make REVOKE_TEST=1
 run_qemu revoke_log.txt
@@ -353,7 +353,7 @@ if ! tr -d '\r' < revoke_log.txt | grep -Fq "REVOKE_OK"; then
 fi
 
 
-echo "[32/34] syscall rate guard check"
+echo "[32/40] syscall rate guard check"
 make clean
 make DOS_GUARD_TEST=1
 run_qemu dos_guard_log.txt
@@ -364,7 +364,7 @@ if ! tr -d '\r' < dos_guard_log.txt | grep -Fq "DOS_GUARD_OK"; then
 fi
 
 
-echo "[33/34] process/task resource quota check"
+echo "[33/40] process/task resource quota check"
 make clean
 make QUOTA_TEST=1
 run_qemu quota_log.txt
@@ -375,13 +375,73 @@ if ! tr -d '\r' < quota_log.txt | grep -Fq "QUOTA_OK"; then
 fi
 
 
-echo "[34/34] capability type isolation matrix check"
+echo "[34/40] capability type isolation matrix check"
 make clean
 make CAP_TYPE_TEST=1
 run_qemu cap_type_log.txt
 
 if ! tr -d '\r' < cap_type_log.txt | grep -Fq "CAP_TYPE_OK"; then
   echo "Expected serial marker CAP_TYPE_OK not found" >&2
+  exit 1
+fi
+
+echo "[35/40] capability lifecycle check"
+make clean
+make CAP_LIFECYCLE_TEST=1
+run_qemu cap_lifecycle_log.txt
+
+if ! tr -d '\r' < cap_lifecycle_log.txt | grep -Fq "CAP_LIFECYCLE_OK"; then
+  echo "Expected serial marker CAP_LIFECYCLE_OK not found" >&2
+  exit 1
+fi
+
+echo "[36/40] ipc + inter-vm platform hardening check"
+make clean
+make IPC_PLATFORM_TEST=1
+run_qemu ipc_platform_log.txt
+
+if ! tr -d '\r' < ipc_platform_log.txt | grep -Fq "IPC_PLATFORM_OK"; then
+  echo "Expected serial marker IPC_PLATFORM_OK not found" >&2
+  exit 1
+fi
+
+echo "[37/40] limits telemetry + deny reason check"
+make clean
+make LIMITS_TEST=1
+run_qemu limits_log.txt
+
+if ! tr -d '\r' < limits_log.txt | grep -Fq "LIMITS_OK"; then
+  echo "Expected serial marker LIMITS_OK not found" >&2
+  exit 1
+fi
+
+echo "[38/40] usermode + driver path hardening check"
+make clean
+make USERMODE_PATH_TEST=1
+run_qemu usermode_path_log.txt
+
+if ! tr -d '\r' < usermode_path_log.txt | grep -Fq "USERMODE_PATH_OK"; then
+  echo "Expected serial marker USERMODE_PATH_OK not found" >&2
+  exit 1
+fi
+
+echo "[39/40] microvm golden security mode boundary check"
+make clean
+make MICROVM_MODE_TEST=1
+run_qemu microvm_mode_log.txt
+
+if ! tr -d '\r' < microvm_mode_log.txt | grep -Fq "MICROVM_MODE_OK"; then
+  echo "Expected serial marker MICROVM_MODE_OK not found" >&2
+  exit 1
+fi
+
+echo "[40/40] unified mode manager launch path check"
+make clean
+make MODE_MANAGER_TEST=1
+run_qemu mode_manager_log.txt
+
+if ! tr -d '\r' < mode_manager_log.txt | grep -Fq "MODE_MANAGER_OK"; then
+  echo "Expected serial marker MODE_MANAGER_OK not found" >&2
   exit 1
 fi
 

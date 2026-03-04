@@ -27,6 +27,22 @@ static int cap_decode(uint64_t handle, uint32_t* index_out, uint32_t* generation
   return 1;
 }
 
+static int cap_resolve_live_entry(uint64_t handle, cap_entry_t** entry_out) {
+  uint32_t index;
+  uint32_t generation;
+  if (!cap_decode(handle, &index, &generation)) {
+    return 0;
+  }
+
+  cap_entry_t* entry = &cap_table[index];
+  if (entry->used == 0 || entry->generation != generation) {
+    return 0;
+  }
+
+  *entry_out = entry;
+  return 1;
+}
+
 void cap_init(void) {
   for (uint32_t i = 0; i < CAP_TABLE_SIZE; ++i) {
     cap_table[i].used = 0;
@@ -49,15 +65,22 @@ uint64_t cap_create(uint32_t type, uint32_t rights) {
   return 0;
 }
 
-int cap_check(uint64_t handle, uint32_t expected_type, uint32_t required_rights) {
-  uint32_t index;
-  uint32_t generation;
-  if (!cap_decode(handle, &index, &generation)) {
+uint64_t cap_delegate(uint64_t source_handle, uint32_t delegated_rights) {
+  cap_entry_t* source;
+  if (!cap_resolve_live_entry(source_handle, &source)) {
     return 0;
   }
 
-  cap_entry_t* entry = &cap_table[index];
-  if (entry->used == 0 || entry->generation != generation) {
+  if ((source->rights & delegated_rights) != delegated_rights) {
+    return 0;
+  }
+
+  return cap_create(source->type, delegated_rights);
+}
+
+int cap_check(uint64_t handle, uint32_t expected_type, uint32_t required_rights) {
+  cap_entry_t* entry;
+  if (!cap_resolve_live_entry(handle, &entry)) {
     return 0;
   }
 
@@ -72,7 +95,7 @@ int cap_check(uint64_t handle, uint32_t expected_type, uint32_t required_rights)
   return 1;
 }
 
-int cap_destroy(uint64_t handle) {
+int cap_audit(uint64_t handle, uint32_t* type_out, uint32_t* rights_out, uint32_t* generation_out) {
   uint32_t index;
   uint32_t generation;
   if (!cap_decode(handle, &index, &generation)) {
@@ -81,6 +104,25 @@ int cap_destroy(uint64_t handle) {
 
   cap_entry_t* entry = &cap_table[index];
   if (entry->used == 0 || entry->generation != generation) {
+    return 0;
+  }
+
+  if (type_out != 0) {
+    *type_out = entry->type;
+  }
+  if (rights_out != 0) {
+    *rights_out = entry->rights;
+  }
+  if (generation_out != 0) {
+    *generation_out = entry->generation;
+  }
+
+  return 1;
+}
+
+int cap_destroy(uint64_t handle) {
+  cap_entry_t* entry;
+  if (!cap_resolve_live_entry(handle, &entry)) {
     return 0;
   }
 
