@@ -49,3 +49,10 @@ Include all of the following in the final response:
 
 ## 7) Communication style for OS-specific questions
 - If the user asks anything OS-specific, explain it as simply as possible in plain, beginner-friendly language.
+
+## 8) Product vision to keep visible in every Codex chat
+- finde-os should stay **shell-first** and avoid depending on a classic desktop GUI.
+- Build a **"GUI-like" Terminal UX (TUI)**: interactive screens, panels, keyboard navigation, clear actions, and consistent shortcuts.
+- Prefer workflows that feel easy for humans in-terminal **and** remain scriptable/automatable for power users.
+- Keep UX deterministic and lightweight so it works well over serial/QEMU/SSH.
+- When proposing features, bias toward this direction: "maximum usability from the shell".
