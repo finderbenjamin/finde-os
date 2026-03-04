@@ -3,11 +3,13 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "cap.h"
 #include "console.h"
 #include "heap.h"
 #include "idt.h"
 
 #define SHELL_MAX_LINE 128
+#define SHELL_MAX_TOKENS 8
 
 static char g_line[SHELL_MAX_LINE + 1];
 static size_t g_cursor = 0;
@@ -51,12 +53,56 @@ static int streq(const char* a, const char* b) {
   return *a == '\0' && *b == '\0';
 }
 
+static int parse_u64(const char* s, uint64_t* value_out) {
+  uint64_t value = 0;
+  if (s == 0 || *s == '\0') {
+    return 0;
+  }
+
+  while (*s != '\0') {
+    if (*s < '0' || *s > '9') {
+      return 0;
+    }
+    value = (value * 10u) + (uint64_t)(*s - '0');
+    ++s;
+  }
+
+  *value_out = value;
+  return 1;
+}
+
+static void write_rights(uint32_t rights) {
+  if (rights == 0u) {
+    console_write("none");
+    return;
+  }
+
+  int wrote = 0;
+  if ((rights & CAP_R_READ) != 0u) {
+    console_write("read");
+    wrote = 1;
+  }
+  if ((rights & CAP_R_WRITE) != 0u) {
+    if (wrote) {
+      console_write("|");
+    }
+    console_write("write");
+    wrote = 1;
+  }
+  if ((rights & CAP_R_EXEC) != 0u) {
+    if (wrote) {
+      console_write("|");
+    }
+    console_write("exec");
+  }
+}
+
 static void shell_prompt(void) {
   console_write("finde-os> ");
 }
 
 static void cmd_help(void) {
-  console_write("commands: help ticks malloc\n");
+  console_write("commands: help ticks malloc cap list|show|check\n");
 }
 
 static void cmd_ticks(void) {
@@ -79,33 +125,166 @@ static void cmd_malloc(void) {
   console_write("\n");
 }
 
-static void shell_execute_line(void) {
-  char command[SHELL_MAX_LINE + 1];
-  size_t i = 0;
+static uint32_t op_to_rights(const char* operation) {
+  if (streq(operation, "read")) {
+    return CAP_R_READ;
+  }
+  if (streq(operation, "write")) {
+    return CAP_R_WRITE;
+  }
+  if (streq(operation, "exec")) {
+    return CAP_R_EXEC;
+  }
+  return 0u;
+}
 
-  while (i < g_cursor && g_line[i] == ' ') {
-    ++i;
+static void cmd_cap_list(void) {
+  cap_snapshot_t snap;
+  int found = 0;
+  for (uint32_t i = 0; i < cap_capacity(); ++i) {
+    if (cap_snapshot_at(i, &snap) == 0) {
+      continue;
+    }
+
+    found = 1;
+    console_write("CAP_LIST id=");
+    write_u64(snap.handle);
+    console_write(" type=");
+    write_u64(snap.type);
+    console_write(" rights=");
+    write_rights(snap.rights);
+    console_write("\n");
   }
 
-  size_t j = 0;
-  while (i < g_cursor && g_line[i] != ' ' && j < SHELL_MAX_LINE) {
-    command[j++] = g_line[i++];
+  if (!found) {
+    console_write("CAP_LIST empty\n");
   }
-  command[j] = '\0';
+}
 
-  if (command[0] == '\0') {
+static void cmd_cap_show(const char* id_token) {
+  uint64_t handle;
+  cap_snapshot_t snap;
+  if (!parse_u64(id_token, &handle) || cap_audit(handle, &snap.type, &snap.rights, &snap.generation) == 0) {
+    console_write("CAP_SHOW deny=");
+    console_write(cap_deny_reason());
+    console_write("\n");
     return;
   }
 
-  if (streq(command, "help")) {
-    cmd_help();
-  } else if (streq(command, "ticks")) {
-    cmd_ticks();
-  } else if (streq(command, "malloc")) {
-    cmd_malloc();
-  } else {
-    console_write("unknown\n");
+  console_write("CAP_SHOW id=");
+  write_u64(handle);
+  console_write(" type=");
+  write_u64(snap.type);
+  console_write(" rights=");
+  write_rights(snap.rights);
+  console_write(" generation=");
+  write_u64(snap.generation);
+  console_write("\n");
+}
+
+static void cmd_cap_check(const char* operation) {
+  uint32_t rights = op_to_rights(operation);
+  const char* deny_reason = 0;
+
+  if (rights == 0u) {
+    console_write("CAP_CHECK deny=");
+    console_write(cap_deny_reason());
+    console_write("\n");
+    return;
   }
+
+  for (uint32_t i = 0; i < cap_capacity(); ++i) {
+    cap_snapshot_t snap;
+    if (cap_snapshot_at(i, &snap) == 0) {
+      continue;
+    }
+
+    if (cap_require(snap.handle, snap.type, rights, &deny_reason) == CAP_REQUIRE_OK) {
+      console_write("CAP_CHECK op=");
+      console_write(operation);
+      console_write(" result=ALLOW id=");
+      write_u64(snap.handle);
+      console_write("\n");
+      return;
+    }
+  }
+
+  console_write("CAP_CHECK op=");
+  console_write(operation);
+  console_write(" result=DENY reason=");
+  console_write(cap_deny_reason());
+  console_write("\n");
+}
+
+static void shell_execute_tokens(char* tokens[], size_t count) {
+  if (count == 0) {
+    return;
+  }
+
+  if (streq(tokens[0], "help")) {
+    cmd_help();
+    return;
+  }
+  if (streq(tokens[0], "ticks")) {
+    cmd_ticks();
+    return;
+  }
+  if (streq(tokens[0], "malloc")) {
+    cmd_malloc();
+    return;
+  }
+
+  if (streq(tokens[0], "cap")) {
+    if (count >= 2 && streq(tokens[1], "list")) {
+      cmd_cap_list();
+      return;
+    }
+    if (count >= 3 && streq(tokens[1], "show")) {
+      cmd_cap_show(tokens[2]);
+      return;
+    }
+    if (count >= 3 && streq(tokens[1], "check")) {
+      cmd_cap_check(tokens[2]);
+      return;
+    }
+  }
+
+  console_write("unknown\n");
+}
+
+void shell_execute_line_for_test(const char* line) {
+  char scratch[SHELL_MAX_LINE + 1];
+  char* tokens[SHELL_MAX_TOKENS];
+  size_t count = 0;
+  size_t i = 0;
+
+  while (line[i] != '\0' && i < SHELL_MAX_LINE) {
+    scratch[i] = line[i];
+    ++i;
+  }
+  scratch[i] = '\0';
+
+  i = 0;
+  while (scratch[i] != '\0' && count < SHELL_MAX_TOKENS) {
+    while (scratch[i] == ' ') {
+      ++i;
+    }
+    if (scratch[i] == '\0') {
+      break;
+    }
+
+    tokens[count++] = &scratch[i];
+    while (scratch[i] != '\0' && scratch[i] != ' ') {
+      ++i;
+    }
+    if (scratch[i] == '\0') {
+      break;
+    }
+    scratch[i] = '\0';
+    ++i;
+  }
+
+  shell_execute_tokens(tokens, count);
 }
 
 void shell_init_minimal(void) {
@@ -122,7 +301,7 @@ void shell_process_input_char_for_test(char c) {
   if (c == '\r' || c == '\n') {
     console_write("\n");
     g_line[g_cursor] = '\0';
-    shell_execute_line();
+    shell_execute_line_for_test(g_line);
     g_cursor = 0;
     shell_prompt();
     return;

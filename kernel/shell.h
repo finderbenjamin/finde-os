@@ -11,4 +11,6 @@ void shell_process_input_char_for_test(char c);
 const char* shell_current_line_for_test(void);
 size_t shell_cursor_for_test(void);
 
+void shell_execute_line_for_test(const char* line);
+
 #endif
