@@ -1089,6 +1089,17 @@ static __attribute__((noreturn)) void cap_type_test_halt_success(void) {
 }
 #endif
 
+
+#ifdef CLI_BASE_TEST
+static __attribute__((noreturn)) void cli_base_test_halt_success(void) {
+  serial_write("CLI_BASE_OK\n");
+  __asm__ volatile ("cli");
+  for (;;) {
+    __asm__ volatile ("hlt");
+  }
+}
+#endif
+
 #ifdef CLI_SECURITY_TEST
 static __attribute__((noreturn)) void cli_security_test_fail(void) {
   serial_write("CLI_SECURITY_FAIL\n");
@@ -1767,6 +1778,13 @@ void kernel_main(uint64_t mb_magic, uint64_t mb_info_addr) {
   microvm_mode_test_halt_success();
 #endif
 
+
+
+
+#ifdef CLI_BASE_TEST
+  serial_init();
+  cli_base_test_halt_success();
+#endif
 
 
 #ifdef CLI_SECURITY_TEST
