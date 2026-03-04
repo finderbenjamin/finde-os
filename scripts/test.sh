@@ -445,7 +445,7 @@ if ! tr -d '\r' < mode_manager_log.txt | grep -Fq "MODE_MANAGER_OK"; then
   exit 1
 fi
 
-echo "[41/42] CLI security introspection check"
+echo "[41/43] CLI security introspection check"
 make clean
 make CLI_SECURITY_TEST=1
 run_qemu cli_security_log.txt
@@ -461,12 +461,24 @@ if ! tr -d '\r' < cli_security_log.txt | grep -Fq "CLI_SECURITY_MARKER:DENY=DENY
 fi
 
 
-echo "[42/42] CLI layered pipeline check"
+echo "[42/43] CLI layered pipeline check"
 make clean
 make CLI_LAYERS_TEST=1
 run_qemu cli_layers_log.txt
 
-if ! tr -d '' < cli_layers_log.txt | grep -Fq "CLI_LAYERS_OK"; then
+if ! tr -d '\r' < cli_layers_log.txt | grep -Fq "CLI_LAYERS_OK"; then
+
+echo "[43/43] CLI baseline pipeline check"
+make clean
+make CLI_BASE_TEST=1
+run_qemu cli_base_log.txt
+
+if ! tr -d '\r' < cli_base_log.txt | grep -Fq "CLI_BASE_OK"; then
+  echo "Expected serial marker CLI_BASE_OK not found" >&2
+  exit 1
+fi
+
+' < cli_layers_log.txt | grep -Fq "CLI_LAYERS_OK"; then
   echo "Expected serial marker CLI_LAYERS_OK not found" >&2
   exit 1
 fi

@@ -68,3 +68,5 @@
 40) CLI capability security introspection (cap list/show/check + unified deny reason + deterministic marker) test -> "CLI_SECURITY_OK"
 
 41) CLI parser/validator/executor layering with deny-path validation test -> "CLI_LAYERS_OK"
+
+42) CLI baseline command pipeline smoke test -> "CLI_BASE_OK"
