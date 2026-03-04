@@ -96,22 +96,6 @@ isr_common:
   movb $'\n', %al
   call serial_write_al
 
-  cmpq $6, %rbx
-  jne 4f
-
-  movb $'N', %al
-  call serial_write_al
-  movb $'X', %al
-  call serial_write_al
-  movb $'_', %al
-  call serial_write_al
-  movb $'O', %al
-  call serial_write_al
-  movb $'K', %al
-  call serial_write_al
-  movb $'\n', %al
-  call serial_write_al
-
 4:
   hlt
   jmp 4b
