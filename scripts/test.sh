@@ -435,7 +435,7 @@ if ! tr -d '\r' < microvm_mode_log.txt | grep -Fq "MICROVM_MODE_OK"; then
   exit 1
 fi
 
-echo "[40/40] unified mode manager launch path check"
+echo "[40/43] unified mode manager launch path check"
 make clean
 make MODE_MANAGER_TEST=1
 run_qemu mode_manager_log.txt
@@ -467,6 +467,9 @@ make CLI_LAYERS_TEST=1
 run_qemu cli_layers_log.txt
 
 if ! tr -d '\r' < cli_layers_log.txt | grep -Fq "CLI_LAYERS_OK"; then
+  echo "Expected serial marker CLI_LAYERS_OK not found" >&2
+  exit 1
+fi
 
 echo "[43/43] CLI baseline pipeline check"
 make clean
@@ -475,11 +478,6 @@ run_qemu cli_base_log.txt
 
 if ! tr -d '\r' < cli_base_log.txt | grep -Fq "CLI_BASE_OK"; then
   echo "Expected serial marker CLI_BASE_OK not found" >&2
-  exit 1
-fi
-
-' < cli_layers_log.txt | grep -Fq "CLI_LAYERS_OK"; then
-  echo "Expected serial marker CLI_LAYERS_OK not found" >&2
   exit 1
 fi
 
