@@ -70,3 +70,5 @@
 41) CLI parser/validator/executor layering with deny-path validation test -> "CLI_LAYERS_OK"
 
 42) CLI baseline command pipeline smoke test -> "CLI_BASE_OK"
+
+43) CLI status command (sandbox/microvm visibility + deterministic marker) test -> "CLI_STATUS_OK"

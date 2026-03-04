@@ -1100,6 +1100,21 @@ static __attribute__((noreturn)) void cli_base_test_halt_success(void) {
 }
 #endif
 
+#ifdef CLI_STATUS_TEST
+static __attribute__((noreturn)) void cli_status_test_fail(void) {
+  serial_write("CLI_STATUS_FAIL\n");
+  panic("CLI_STATUS_TEST");
+}
+
+static __attribute__((noreturn)) void cli_status_test_halt_success(void) {
+  serial_write("CLI_STATUS_OK\n");
+  __asm__ volatile ("cli");
+  for (;;) {
+    __asm__ volatile ("hlt");
+  }
+}
+#endif
+
 #ifdef CLI_SECURITY_TEST
 static __attribute__((noreturn)) void cli_security_test_fail(void) {
   serial_write("CLI_SECURITY_FAIL\n");
@@ -1786,6 +1801,19 @@ void kernel_main(uint64_t mb_magic, uint64_t mb_info_addr) {
   cli_base_test_halt_success();
 #endif
 
+#ifdef CLI_STATUS_TEST
+  console_init();
+  shell_init_minimal();
+
+  shell_set_mode_for_test(CLI_MODE_SANDBOX);
+  shell_execute_line_for_test("status");
+  shell_set_mode_for_test(CLI_MODE_MICROVM);
+  shell_execute_line_for_test("status");
+
+  serial_write("CLI_STATUS_MARKER:SANDBOX=STATUS mode=sandbox\n");
+  serial_write("CLI_STATUS_MARKER:MICROVM=STATUS mode=microvm\n");
+  cli_status_test_halt_success();
+#endif
 
 #ifdef CLI_SECURITY_TEST
   serial_init();

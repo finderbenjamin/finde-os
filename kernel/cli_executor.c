@@ -91,7 +91,18 @@ void cli_execute_validated(const cli_validated_command_t* cmd) {
   }
 
   if (cmd->ast.kind == CLI_AST_HELP) {
-    console_write("commands: help ticks malloc cap list|show|check\n");
+    console_write("commands: help status ticks malloc cap list|show|check\n");
+    return;
+  }
+
+  if (cmd->ast.kind == CLI_AST_STATUS) {
+    console_write("STATUS mode=");
+    if (cmd->mode == CLI_MODE_MICROVM) {
+      console_write("microvm");
+    } else {
+      console_write("sandbox");
+    }
+    console_write("\n");
     return;
   }
 

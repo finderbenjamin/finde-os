@@ -21,6 +21,7 @@ typedef struct {
   cli_validate_status_t status;
   const char* reason;
   uint64_t handle;
+  cli_mode_t mode;
 } cli_validated_command_t;
 
 int cli_validate_ast(const cli_ast_t* ast, cli_mode_t mode, cli_validated_command_t* out);
