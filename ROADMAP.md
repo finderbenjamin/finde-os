@@ -64,3 +64,5 @@
 38) MicroVM golden security mode boundary + mode-switch reliability test -> "MICROVM_MODE_OK"
 
 39) Unified mode manager (policy->sandbox/microvm path + clear deny reasons) test -> "MODE_MANAGER_OK"
+
+40) CLI capability security introspection (cap list/show/check + unified deny reason + deterministic marker) test -> "CLI_SECURITY_OK"

@@ -135,3 +135,42 @@ int cap_destroy(uint64_t handle) {
   }
   return 1;
 }
+
+int cap_require(uint64_t handle, uint32_t expected_type, uint32_t required_rights, const char** deny_reason_out) {
+  if (cap_check(handle, expected_type, required_rights) == 1) {
+    if (deny_reason_out != 0) {
+      *deny_reason_out = "OK";
+    }
+    return CAP_REQUIRE_OK;
+  }
+
+  if (deny_reason_out != 0) {
+    *deny_reason_out = cap_deny_reason();
+  }
+  return CAP_REQUIRE_DENIED;
+}
+
+const char* cap_deny_reason(void) {
+  return "DENY: capability security check failed";
+}
+
+uint32_t cap_capacity(void) {
+  return CAP_TABLE_SIZE;
+}
+
+int cap_snapshot_at(uint32_t slot_index, cap_snapshot_t* snapshot_out) {
+  if (snapshot_out == 0 || slot_index >= CAP_TABLE_SIZE) {
+    return 0;
+  }
+
+  cap_entry_t* entry = &cap_table[slot_index];
+  if (entry->used == 0) {
+    return 0;
+  }
+
+  snapshot_out->handle = cap_encode(slot_index, entry->generation);
+  snapshot_out->type = entry->type;
+  snapshot_out->rights = entry->rights;
+  snapshot_out->generation = entry->generation;
+  return 1;
+}

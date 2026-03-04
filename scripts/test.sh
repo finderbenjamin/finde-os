@@ -445,4 +445,19 @@ if ! tr -d '\r' < mode_manager_log.txt | grep -Fq "MODE_MANAGER_OK"; then
   exit 1
 fi
 
+echo "[41/41] CLI security introspection check"
+make clean
+make CLI_SECURITY_TEST=1
+run_qemu cli_security_log.txt
+
+if ! tr -d '\r' < cli_security_log.txt | grep -Fq "CLI_SECURITY_OK"; then
+  echo "Expected serial marker CLI_SECURITY_OK not found" >&2
+  exit 1
+fi
+
+if ! tr -d '\r' < cli_security_log.txt | grep -Fq "CLI_SECURITY_MARKER:DENY=DENY: capability security check failed"; then
+  echo "Expected deterministic deny marker not found" >&2
+  exit 1
+fi
+
 echo "PASS"

@@ -169,7 +169,7 @@ static int cap_enforce_require_write(uint64_t handle) {
 
 
 
-#ifdef SYSCALL_DENY_TEST
+#if defined(SYSCALL_DENY_TEST) || defined(CLI_SECURITY_TEST)
 static __attribute__((noreturn)) void syscall_deny_test_fail(void) {
   serial_write("SYSCALL_DENY_FAIL\n");
   panic("SYSCALL_DENY_TEST");
@@ -184,7 +184,7 @@ static __attribute__((noreturn)) void syscall_deny_test_halt_success(void) {
 }
 
 static int syscall_deny_log_write(uint64_t handle, uint32_t pid, const char* msg) {
-  if (cap_check(handle, pid, CAP_R_WRITE) == 0) {
+  if (cap_require(handle, pid, CAP_R_WRITE, 0) != CAP_REQUIRE_OK) {
     return 0;
   }
 
@@ -193,7 +193,7 @@ static int syscall_deny_log_write(uint64_t handle, uint32_t pid, const char* msg
 }
 #endif
 
-#ifdef SYSCALL_TEST
+#if defined(SYSCALL_TEST) || defined(CLI_SECURITY_TEST)
 static __attribute__((noreturn)) void syscall_test_fail(void) {
   serial_write("SYSCALL_FAIL\n");
   panic("SYSCALL_TEST");
@@ -208,7 +208,7 @@ static __attribute__((noreturn)) void syscall_test_halt_success(void) {
 }
 
 static int syscall_log_write(uint64_t handle, uint32_t pid, const char* msg) {
-  if (cap_check(handle, pid, CAP_R_WRITE) == 0) {
+  if (cap_require(handle, pid, CAP_R_WRITE, 0) != CAP_REQUIRE_OK) {
     return 0;
   }
 
@@ -325,7 +325,7 @@ static __attribute__((noreturn)) void user_task_test_halt_success(void) {
 }
 
 static int user_task_sys_write(uint64_t handle, uint32_t pid, const char* msg) {
-  if (cap_check(handle, pid, CAP_R_WRITE) == 0) {
+  if (cap_require(handle, pid, CAP_R_WRITE, 0) != CAP_REQUIRE_OK) {
     return 0;
   }
 
@@ -334,7 +334,7 @@ static int user_task_sys_write(uint64_t handle, uint32_t pid, const char* msg) {
 }
 #endif
 
-#ifdef USER_TASK_DENY_TEST
+#if defined(USER_TASK_DENY_TEST) || defined(CLI_SECURITY_TEST)
 static __attribute__((noreturn)) void user_task_deny_test_fail(void) {
   serial_write("USER_TASK_DENY_FAIL\n");
   panic("USER_TASK_DENY_TEST");
@@ -349,7 +349,7 @@ static __attribute__((noreturn)) void user_task_deny_test_halt_success(void) {
 }
 
 static int user_task_deny_sys_write(uint64_t handle, uint32_t pid, const char* msg) {
-  if (cap_check(handle, pid, CAP_R_WRITE) == 0) {
+  if (cap_require(handle, pid, CAP_R_WRITE, 0) != CAP_REQUIRE_OK) {
     return 0;
   }
 
@@ -726,13 +726,13 @@ static const char* mode_manager_exit_reason_text(uint32_t reason) {
 static int mode_manager_select_and_launch(mode_manager_app_t* app, uint32_t caller_id,
                                           mode_manager_telemetry_t* telemetry) {
   if (app->policy == APP_POLICY_HIGH_ISOLATION) {
-    if (cap_check(app->microvm_cap, app->app_id, CAP_R_WRITE) == 0) {
+    if (cap_require(app->microvm_cap, app->app_id, CAP_R_WRITE, 0) != CAP_REQUIRE_OK) {
       telemetry->deny_count += 1u;
       telemetry->last_exit_reason = MODE_EXIT_DENIED_STALE_CAP;
       return 0;
     }
 
-    if (cap_check(app->microvm_cap, caller_id, CAP_R_WRITE) == 0) {
+    if (cap_require(app->microvm_cap, caller_id, CAP_R_WRITE, 0) != CAP_REQUIRE_OK) {
       telemetry->deny_count += 1u;
       telemetry->last_exit_reason = MODE_EXIT_DENIED_BOUNDARY;
       return 0;
@@ -745,7 +745,7 @@ static int mode_manager_select_and_launch(mode_manager_app_t* app, uint32_t call
   }
 
   if (app->policy == APP_POLICY_NORMAL) {
-    if (cap_check(app->sandbox_cap, caller_id, CAP_R_READ) == 0) {
+    if (cap_require(app->sandbox_cap, caller_id, CAP_R_READ, 0) != CAP_REQUIRE_OK) {
       telemetry->deny_count += 1u;
       telemetry->last_exit_reason = MODE_EXIT_DENIED_BOUNDARY;
       return 0;
@@ -1078,6 +1078,21 @@ static __attribute__((noreturn)) void cap_type_test_fail(void) {
 
 static __attribute__((noreturn)) void cap_type_test_halt_success(void) {
   serial_write("CAP_TYPE_OK\n");
+  __asm__ volatile ("cli");
+  for (;;) {
+    __asm__ volatile ("hlt");
+  }
+}
+#endif
+
+#ifdef CLI_SECURITY_TEST
+static __attribute__((noreturn)) void cli_security_test_fail(void) {
+  serial_write("CLI_SECURITY_FAIL\n");
+  panic("CLI_SECURITY_TEST");
+}
+
+static __attribute__((noreturn)) void cli_security_test_halt_success(void) {
+  serial_write("CLI_SECURITY_OK\n");
   __asm__ volatile ("cli");
   for (;;) {
     __asm__ volatile ("hlt");
@@ -1745,6 +1760,45 @@ void kernel_main(uint64_t mb_magic, uint64_t mb_info_addr) {
   microvm_mode_test_halt_success();
 #endif
 
+
+
+#ifdef CLI_SECURITY_TEST
+  serial_init();
+  cap_init();
+
+  const uint32_t cli_pid = 41u;
+  const uint64_t read_cap = cap_create(cli_pid, CAP_R_READ);
+  const uint64_t write_cap = cap_create(cli_pid, CAP_R_WRITE);
+  if (read_cap == 0 || write_cap == 0) {
+    cli_security_test_fail();
+  }
+
+  if (syscall_log_write(read_cap, cli_pid, "CLI_SECURITY_DENY_UNEXPECTED\n") != 0) {
+    cli_security_test_fail();
+  }
+  if (syscall_log_write(write_cap, cli_pid, "CLI_SECURITY_ALLOW_PATH\n") != 1) {
+    cli_security_test_fail();
+  }
+
+  shell_init_minimal();
+  shell_execute_line_for_test("cap list");
+  shell_execute_line_for_test("cap show 4294967295");
+  shell_execute_line_for_test("cap check write");
+  shell_execute_line_for_test("cap check invalid");
+
+  if (cap_destroy(write_cap) != 1) {
+    cli_security_test_fail();
+  }
+  if (user_task_deny_sys_write(write_cap, cli_pid, "CLI_SECURITY_STALE_UNEXPECTED\n") != 0) {
+    cli_security_test_fail();
+  }
+
+  serial_write("CLI_SECURITY_MARKER:DENY=");
+  serial_write(cap_deny_reason());
+  serial_write("\n");
+
+  cli_security_test_halt_success();
+#endif
 
 #ifdef MODE_MANAGER_TEST
   serial_init();
