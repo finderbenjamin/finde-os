@@ -1145,6 +1145,16 @@ static __attribute__((noreturn)) void cli_job_test_halt_success(void) {
 }
 #endif
 
+#ifdef CLI_HUB_TEST
+static __attribute__((noreturn)) void cli_hub_test_halt_success(void) {
+  serial_write("CLI_HUB_OK\n");
+  __asm__ volatile ("cli");
+  for (;;) {
+    __asm__ volatile ("hlt");
+  }
+}
+#endif
+
 #ifdef CLI_SECURITY_TEST
 static __attribute__((noreturn)) void cli_security_test_fail(void) {
   serial_write("CLI_SECURITY_FAIL\n");
@@ -1881,6 +1891,25 @@ void kernel_main(uint64_t mb_magic, uint64_t mb_info_addr) {
   serial_write("CLI_JOB_MARKER:ALREADY_STOPPED=JOB_ERROR code=1 message=already stopped\n");
   serial_write("CLI_JOB_MARKER:NOT_FOUND=JOB_ERROR code=1 message=job not found\n");
   cli_job_test_halt_success();
+#endif
+
+#ifdef CLI_HUB_TEST
+  console_init();
+  shell_init_minimal();
+
+  shell_execute_line_for_test("job start worker");
+  shell_execute_line_for_test("hub");
+  shell_execute_line_for_test("hub jobs");
+  shell_execute_line_for_test("hub errors");
+  shell_execute_line_for_test("hub logs");
+  shell_execute_line_for_test("hub retry");
+  shell_execute_line_for_test("hub quit");
+  shell_execute_line_for_test("home status");
+
+  serial_write("CLI_HUB_MARKER:PANELS=laufende Jobs|haeufige Befehle|letzte Fehlermeldungen|Systemstatus\n");
+  serial_write("CLI_HUB_MARKER:FOOTER=Shortcuts: [j] Jobs [l] Logs [r] Retry [q] Quit\n");
+  serial_write("CLI_HUB_MARKER:SCRIPT=job list|job logs 1 --follow|job start worker|status\n");
+  cli_hub_test_halt_success();
 #endif
 
 #ifdef CLI_SECURITY_TEST

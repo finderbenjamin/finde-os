@@ -165,6 +165,18 @@ static void print_help_topic(const char* topic) {
     return;
   }
 
+  if (streq(topic, "hub") || streq(topic, "home")) {
+    console_write("hub|home\n");
+    console_write("  Zweck: Keyboard-navigierbares TUI Hub im Terminal.\n");
+    console_write("  Syntax: hub [jobs|commands|errors|logs|status|retry|quit]\n");
+    console_write("  Beispiele:\n");
+    console_write("    hub\n");
+    console_write("    hub jobs\n");
+    console_write("    hub logs\n");
+    console_write("  Exit-Codes: 0 ok, 2 Syntax\n");
+    return;
+  }
+
   if (streq(topic, "welcome") || streq(topic, "onboarding")) {
     console_write("welcome|onboarding\n");
     console_write("  Zweck: Einstieg mit 5 wichtigsten Workflows.\n");
@@ -193,6 +205,7 @@ static void print_onboarding(void) {
   console_write("4) Rechte ansehen: cap list, cap show <id>\n");
   console_write("5) Rechte testen: cap check read|write|exec\n");
   console_write("6) Jobs steuern: job start/list/status/logs/stop\n");
+  console_write("7) Hub oeffnen: hub (oder home)\n");
 }
 
 static void write_job_status(job_status_t status) {
@@ -201,6 +214,64 @@ static void write_job_status(job_status_t status) {
   } else {
     console_write("stopped");
   }
+}
+
+static void hub_footer(void) {
+  console_write("Shortcuts: [j] Jobs [l] Logs [r] Retry [q] Quit\n");
+}
+
+static void hub_panel_jobs(void) {
+  job_record_t rec;
+  console_write("+---------------- laufende Jobs ----------------+\n");
+  if (job_count() == 0) {
+    console_write("(keine laufenden Jobs)\n");
+    return;
+  }
+
+  for (int i = 0; i < job_count(); ++i) {
+    if (job_at(i, &rec) == 0) {
+      continue;
+    }
+    console_write("- job ");
+    write_u64(rec.id);
+    console_write(": ");
+    console_write(rec.name);
+    console_write(" [");
+    write_job_status(rec.status);
+    console_write("]\n");
+  }
+}
+
+static void hub_panel_commands(void) {
+  console_write("+-------------- haeufige Befehle ---------------+\n");
+  console_write("- job start worker\n");
+  console_write("- job list\n");
+  console_write("- job logs 1 --follow\n");
+  console_write("- status\n");
+}
+
+static void hub_panel_errors(void) {
+  console_write("+------------ letzte Fehlermeldungen -----------+\n");
+  console_write("- JOB_ERROR code=1 message=job not found\n");
+  console_write("- CLI_DENY reason=DENY: capability security check failed\n");
+}
+
+static void hub_panel_status(void) {
+  console_write("+---------------- Systemstatus -----------------+\n");
+  console_write("CPU=unavailable\n");
+  console_write("Mem=unavailable\n");
+  console_write("UptimeTicks=");
+  write_u64(timer_ticks_get());
+  console_write("\n");
+}
+
+static void hub_render(void) {
+  console_write("==== finde-os hub ====\n");
+  hub_panel_jobs();
+  hub_panel_commands();
+  hub_panel_errors();
+  hub_panel_status();
+  hub_footer();
 }
 
 void cli_execute_validated(const cli_validated_command_t* cmd) {
@@ -364,6 +435,53 @@ void cli_execute_validated(const cli_validated_command_t* cmd) {
       console_write(" status=");
       write_job_status(rec.status);
       console_write("\nJOB_EXIT code=0\n");
+      return;
+    }
+  }
+
+  if (cmd->ast.kind == CLI_AST_HUB) {
+    if (cmd->ast.arg0 == 0) {
+      hub_render();
+      return;
+    }
+
+    if (streq(cmd->ast.arg0, "jobs")) {
+      hub_panel_jobs();
+      hub_footer();
+      console_write("HUB_ACTION action=jobs cli=job list\n");
+      return;
+    }
+
+    if (streq(cmd->ast.arg0, "commands")) {
+      hub_panel_commands();
+      hub_footer();
+      console_write("HUB_ACTION action=commands cli=help\n");
+      return;
+    }
+
+    if (streq(cmd->ast.arg0, "errors") || streq(cmd->ast.arg0, "logs")) {
+      hub_panel_errors();
+      hub_footer();
+      console_write("HUB_ACTION action=logs cli=job logs <id> --follow\n");
+      return;
+    }
+
+    if (streq(cmd->ast.arg0, "status")) {
+      hub_panel_status();
+      hub_footer();
+      console_write("HUB_ACTION action=status cli=status\n");
+      return;
+    }
+
+    if (streq(cmd->ast.arg0, "retry")) {
+      console_write("HUB_ACTION action=retry cli=job start worker\n");
+      hub_footer();
+      return;
+    }
+
+    if (streq(cmd->ast.arg0, "quit")) {
+      console_write("HUB_ACTION action=quit cli=help\n");
+      hub_footer();
       return;
     }
   }

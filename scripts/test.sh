@@ -507,6 +507,16 @@ make clean
 make CLI_HELP_TEST=1
 run_qemu cli_help_log.txt
 
+if ! tr -d '\r' < cli_help_log.txt | grep -Fq "CLI_HELP_OK"; then
+  echo "Expected serial marker CLI_HELP_OK not found" >&2
+  exit 1
+fi
+
+if ! tr -d '\r' < cli_help_log.txt | grep -Fq "CLI_HELP_MARKER:SUGGEST=Did you mean 'help'?"; then
+  echo "Expected suggestion marker not found" >&2
+  exit 1
+fi
+
 echo "[46/46] CLI job command check"
 make clean
 make CLI_JOB_TEST=1
@@ -522,9 +532,15 @@ if ! tr -d '\r' < cli_job_log.txt | grep -Fq "CLI_JOB_MARKER:NOT_FOUND=JOB_ERROR
   exit 1
 fi
 
-if ! tr -d '' < cli_help_log.txt | grep -Fq "CLI_HELP_OK"; then
-  echo "Expected serial marker CLI_HELP_OK not found" >&2
-  exit 1
+echo "[47/47] CLI hub command check"
+make clean
+make CLI_HUB_TEST=1
+run_qemu cli_hub_log.txt
+
+if ! tr -d '\r' < cli_hub_log.txt | grep -Fq "CLI_HUB_OK"; then
+  echo "Expected serial marker CLI_HUB_OK not found" >&2
+if ! tr -d '\r' < cli_hub_log.txt | grep -Fq "CLI_HUB_MARKER:FOOTER=Shortcuts: [j] Jobs [l] Logs [r] Retry [q] Quit"; then
+  echo "Expected hub footer marker not found" >&2
 fi
 
 if ! tr -d '' < cli_help_log.txt | grep -Fq "CLI_HELP_MARKER:SUGGEST=Did you mean 'help'?"; then

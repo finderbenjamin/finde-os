@@ -94,13 +94,30 @@ int cli_validate_ast(const cli_ast_t* ast, cli_mode_t mode, cli_validated_comman
 
   if (ast->kind == CLI_AST_HELP && ast->arg0 != 0) {
     if (streq(ast->arg0, "help") || streq(ast->arg0, "status") || streq(ast->arg0, "ticks") || streq(ast->arg0, "malloc") ||
-        streq(ast->arg0, "cap") || streq(ast->arg0, "job") || streq(ast->arg0, "welcome") || streq(ast->arg0, "onboarding")) {
+        streq(ast->arg0, "cap") || streq(ast->arg0, "job") || streq(ast->arg0, "hub") || streq(ast->arg0, "home") ||
+        streq(ast->arg0, "welcome") || streq(ast->arg0, "onboarding")) {
       return 1;
     }
 
     out->status = CLI_VALIDATE_SYNTAX;
     out->reason = "unknown help topic";
     out->suggestion = suggest_command(ast->arg0);
+    return 1;
+  }
+
+
+  if (ast->kind == CLI_AST_HUB) {
+    if (ast->arg0 == 0) {
+      return 1;
+    }
+
+    if (streq(ast->arg0, "jobs") || streq(ast->arg0, "commands") || streq(ast->arg0, "errors") || streq(ast->arg0, "logs") ||
+        streq(ast->arg0, "status") || streq(ast->arg0, "retry") || streq(ast->arg0, "quit")) {
+      return 1;
+    }
+
+    out->status = CLI_VALIDATE_SYNTAX;
+    out->reason = "hub action unknown";
     return 1;
   }
 
