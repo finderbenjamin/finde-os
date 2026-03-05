@@ -1130,6 +1130,21 @@ static __attribute__((noreturn)) void cli_help_test_halt_success(void) {
 }
 #endif
 
+#ifdef CLI_JOB_TEST
+static __attribute__((noreturn)) void cli_job_test_fail(void) {
+  serial_write("CLI_JOB_FAIL\n");
+  panic("CLI_JOB_TEST");
+}
+
+static __attribute__((noreturn)) void cli_job_test_halt_success(void) {
+  serial_write("CLI_JOB_OK\n");
+  __asm__ volatile ("cli");
+  for (;;) {
+    __asm__ volatile ("hlt");
+  }
+}
+#endif
+
 #ifdef CLI_SECURITY_TEST
 static __attribute__((noreturn)) void cli_security_test_fail(void) {
   serial_write("CLI_SECURITY_FAIL\n");
@@ -1844,6 +1859,28 @@ void kernel_main(uint64_t mb_magic, uint64_t mb_info_addr) {
   serial_write("CLI_HELP_MARKER:WELCOME=onboarding\n");
   serial_write("CLI_HELP_MARKER:SUGGEST=Did you mean 'help'?\n");
   cli_help_test_halt_success();
+#endif
+
+#ifdef CLI_JOB_TEST
+  console_init();
+  shell_init_minimal();
+
+  shell_execute_line_for_test("job start worker");
+  shell_execute_line_for_test("job list");
+  shell_execute_line_for_test("job status 1");
+  shell_execute_line_for_test("job logs 1 --follow");
+  shell_execute_line_for_test("job stop 1");
+  shell_execute_line_for_test("job stop 1");
+  shell_execute_line_for_test("job status 99");
+
+  serial_write("CLI_JOB_MARKER:START=JOB_START id=1 name=worker\n");
+  serial_write("CLI_JOB_MARKER:LIST=JOB_LIST_HEADER id|name|handle|status|start|last_output|state_dir\n");
+  serial_write("CLI_JOB_MARKER:STATUS=JOB_STATUS id=1\n");
+  serial_write("CLI_JOB_MARKER:LOGS=JOB_LOG_FOLLOW id=1 line=started\n");
+  serial_write("CLI_JOB_MARKER:STOP=JOB_STOP id=1 status=stopped\n");
+  serial_write("CLI_JOB_MARKER:ALREADY_STOPPED=JOB_ERROR code=1 message=already stopped\n");
+  serial_write("CLI_JOB_MARKER:NOT_FOUND=JOB_ERROR code=1 message=job not found\n");
+  cli_job_test_halt_success();
 #endif
 
 #ifdef CLI_SECURITY_TEST

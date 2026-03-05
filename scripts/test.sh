@@ -507,6 +507,21 @@ make clean
 make CLI_HELP_TEST=1
 run_qemu cli_help_log.txt
 
+echo "[46/46] CLI job command check"
+make clean
+make CLI_JOB_TEST=1
+run_qemu cli_job_log.txt
+
+if ! tr -d '\r' < cli_job_log.txt | grep -Fq "CLI_JOB_OK"; then
+  echo "Expected serial marker CLI_JOB_OK not found" >&2
+  exit 1
+fi
+
+if ! tr -d '\r' < cli_job_log.txt | grep -Fq "CLI_JOB_MARKER:NOT_FOUND=JOB_ERROR code=1 message=job not found"; then
+  echo "Expected job not found marker not found" >&2
+  exit 1
+fi
+
 if ! tr -d '' < cli_help_log.txt | grep -Fq "CLI_HELP_OK"; then
   echo "Expected serial marker CLI_HELP_OK not found" >&2
   exit 1

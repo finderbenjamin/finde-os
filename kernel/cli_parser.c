@@ -64,6 +64,8 @@ int cli_parse_line(const char* line, cli_parse_buffer_t* buffer, cli_ast_t* ast_
 
   ast_out->kind = CLI_AST_UNKNOWN;
   ast_out->arg0 = 0;
+  ast_out->arg1 = 0;
+  ast_out->arg2 = 0;
 
   if (buffer->token_count == 0) {
     ast_out->kind = CLI_AST_EMPTY;
@@ -125,6 +127,14 @@ int cli_parse_line(const char* line, cli_parse_buffer_t* buffer, cli_ast_t* ast_
       ast_out->arg0 = buffer->tokens[2];
       return 1;
     }
+  }
+
+  if (streq(buffer->tokens[0], "job")) {
+    ast_out->kind = CLI_AST_JOB;
+    if (buffer->token_count >= 2) ast_out->arg0 = buffer->tokens[1];
+    if (buffer->token_count >= 3) ast_out->arg1 = buffer->tokens[2];
+    if (buffer->token_count >= 4) ast_out->arg2 = buffer->tokens[3];
+    return 1;
   }
 
   ast_out->arg0 = buffer->tokens[0];

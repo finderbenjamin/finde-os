@@ -33,6 +33,13 @@ void shell_execute_line_for_test(const char* line) {
   }
 
   if (validated.status == CLI_VALIDATE_SYNTAX) {
+    if (ast.kind == CLI_AST_JOB) {
+      console_write("JOB_ERROR code=2 message=");
+      console_write(validated.reason);
+      console_write("\nJOB_EXIT code=2\n");
+      return;
+    }
+
     console_write("CLI_ERROR stage=validate reason=");
     console_write(validated.reason);
     if (validated.suggestion != 0) {

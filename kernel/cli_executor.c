@@ -6,6 +6,7 @@
 #include "console.h"
 #include "heap.h"
 #include "idt.h"
+#include "job.h"
 
 static int streq(const char* a, const char* b) {
   while (*a && *b) {
@@ -150,6 +151,20 @@ static void print_help_topic(const char* topic) {
     return;
   }
 
+  if (streq(topic, "job")) {
+    console_write("job\n");
+    console_write("  Zweck: Einfache Hintergrund-Jobs verwalten.\n");
+    console_write("  Syntax: job start <cmd>|list|status <id>|logs <id> [--follow]|stop <id>\n");
+    console_write("  Beispiele:\n");
+    console_write("    job start worker\n");
+    console_write("    job list\n");
+    console_write("    job status 1\n");
+    console_write("    job logs 1 --follow\n");
+    console_write("    job stop 1\n");
+    console_write("  Exit-Codes: 0 ok, 1 Laufzeitfehler, 2 Syntax\n");
+    return;
+  }
+
   if (streq(topic, "welcome") || streq(topic, "onboarding")) {
     console_write("welcome|onboarding\n");
     console_write("  Zweck: Einstieg mit 5 wichtigsten Workflows.\n");
@@ -177,6 +192,15 @@ static void print_onboarding(void) {
   console_write("3) Zeit pruefen: ticks\n");
   console_write("4) Rechte ansehen: cap list, cap show <id>\n");
   console_write("5) Rechte testen: cap check read|write|exec\n");
+  console_write("6) Jobs steuern: job start/list/status/logs/stop\n");
+}
+
+static void write_job_status(job_status_t status) {
+  if (status == JOB_STATUS_RUNNING) {
+    console_write("running");
+  } else {
+    console_write("stopped");
+  }
 }
 
 void cli_execute_validated(const cli_validated_command_t* cmd) {
@@ -229,6 +253,119 @@ void cli_execute_validated(const cli_validated_command_t* cmd) {
     write_hex_u64((uint64_t)(uintptr_t)c);
     console_write("\n");
     return;
+  }
+
+  if (cmd->ast.kind == CLI_AST_JOB) {
+    job_record_t rec;
+
+    if (streq(cmd->ast.arg0, "start")) {
+      if (job_start(cmd->ast.arg1, &rec) == 0) {
+        console_write("JOB_ERROR code=1 message=job start failed\n");
+        console_write("JOB_EXIT code=1\n");
+        return;
+      }
+      console_write("JOB_START id=");
+      write_u64(rec.id);
+      console_write(" name=");
+      console_write(rec.name);
+      console_write(" handle=");
+      write_u64(rec.handle);
+      console_write(" status=");
+      write_job_status(rec.status);
+      console_write(" start=");
+      write_u64(rec.start_ticks);
+      console_write(" state_dir=");
+      console_write(job_state_dir());
+      console_write("\nJOB_EXIT code=0\n");
+      return;
+    }
+
+    if (streq(cmd->ast.arg0, "list")) {
+      console_write("JOB_LIST_HEADER id|name|handle|status|start|last_output|state_dir\n");
+      for (int i = 0; i < job_count(); ++i) {
+        if (job_at(i, &rec) == 0) {
+          continue;
+        }
+        write_u64(rec.id);
+        console_write("|");
+        console_write(rec.name);
+        console_write("|");
+        write_u64(rec.handle);
+        console_write("|");
+        write_job_status(rec.status);
+        console_write("|");
+        write_u64(rec.start_ticks);
+        console_write("|");
+        console_write(rec.last_output);
+        console_write("|");
+        console_write(job_state_dir());
+        console_write("\n");
+      }
+      console_write("JOB_EXIT code=0\n");
+      return;
+    }
+
+    if (job_by_id(cmd->job_id, &rec) == 0) {
+      console_write("JOB_ERROR code=1 message=job not found\n");
+      console_write("JOB_EXIT code=1\n");
+      return;
+    }
+
+    if (streq(cmd->ast.arg0, "status")) {
+      console_write("JOB_STATUS id=");
+      write_u64(rec.id);
+      console_write(" name=");
+      console_write(rec.name);
+      console_write(" handle=");
+      write_u64(rec.handle);
+      console_write(" status=");
+      write_job_status(rec.status);
+      console_write(" start=");
+      write_u64(rec.start_ticks);
+      console_write(" last_output=");
+      console_write(rec.last_output);
+      console_write("\nJOB_EXIT code=0\n");
+      return;
+    }
+
+    if (streq(cmd->ast.arg0, "logs")) {
+      console_write("JOB_LOG id=");
+      write_u64(rec.id);
+      console_write(" line=");
+      console_write(rec.last_output);
+      console_write("\n");
+      if (cmd->follow) {
+        console_write("JOB_LOG_FOLLOW id=");
+        write_u64(rec.id);
+        console_write(" line=");
+        console_write(rec.last_output);
+        console_write("\n");
+      }
+      console_write("JOB_EXIT code=0\n");
+      return;
+    }
+
+    if (streq(cmd->ast.arg0, "stop")) {
+      int stop_status = job_stop(cmd->job_id, &rec);
+      if (stop_status == -1) {
+        console_write("JOB_ERROR code=1 message=already stopped\n");
+        console_write("JOB_EXIT code=1\n");
+        return;
+      }
+
+      if (stop_status == 0) {
+        console_write("JOB_ERROR code=1 message=job not found\n");
+        console_write("JOB_EXIT code=1\n");
+        return;
+      }
+
+      console_write("JOB_STOP id=");
+      write_u64(rec.id);
+      console_write(" status=");
+      write_job_status(rec.status);
+      console_write("\nJOB_EXIT code=0\n");
+      return;
+    }
   }
 
   if (cmd->ast.kind == CLI_AST_CAP_LIST) {

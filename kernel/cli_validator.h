@@ -22,6 +22,8 @@ typedef struct {
   const char* reason;
   const char* suggestion;
   uint64_t handle;
+  uint64_t job_id;
+  int follow;
   cli_mode_t mode;
 } cli_validated_command_t;
 
