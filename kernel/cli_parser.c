@@ -82,8 +82,8 @@ int cli_parse_line(const char* line, cli_parse_buffer_t* buffer, cli_ast_t* ast_
 
   if (buffer->token_count >= 2 && streq(buffer->tokens[1], "--help")) {
     if (streq(buffer->tokens[0], "status") || streq(buffer->tokens[0], "ticks") || streq(buffer->tokens[0], "malloc") ||
-        streq(buffer->tokens[0], "cap") || streq(buffer->tokens[0], "welcome") || streq(buffer->tokens[0], "onboarding") ||
-        streq(buffer->tokens[0], "help")) {
+        streq(buffer->tokens[0], "cap") || streq(buffer->tokens[0], "hub") || streq(buffer->tokens[0], "home") ||
+        streq(buffer->tokens[0], "welcome") || streq(buffer->tokens[0], "onboarding") || streq(buffer->tokens[0], "help")) {
       ast_out->kind = CLI_AST_HELP;
       ast_out->arg0 = buffer->tokens[0];
       return 1;
@@ -134,6 +134,13 @@ int cli_parse_line(const char* line, cli_parse_buffer_t* buffer, cli_ast_t* ast_
     if (buffer->token_count >= 2) ast_out->arg0 = buffer->tokens[1];
     if (buffer->token_count >= 3) ast_out->arg1 = buffer->tokens[2];
     if (buffer->token_count >= 4) ast_out->arg2 = buffer->tokens[3];
+    return 1;
+  }
+
+  if (streq(buffer->tokens[0], "hub") || streq(buffer->tokens[0], "home")) {
+    ast_out->kind = CLI_AST_HUB;
+    if (buffer->token_count >= 2) ast_out->arg0 = buffer->tokens[1];
+    if (buffer->token_count >= 3) ast_out->arg1 = buffer->tokens[2];
     return 1;
   }
 

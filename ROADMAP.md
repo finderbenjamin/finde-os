@@ -76,3 +76,5 @@
 44) CLI global help/onboarding UX + unknown-command suggestion test -> "CLI_HELP_OK"
 
 45) CLI job command suite (start/list/status/logs/stop + deterministic output + state dir marker) test -> "CLI_JOB_OK"
+
+46) CLI hub/home TUI command (4 panels + shortcuts + scriptable actions) test -> "CLI_HUB_OK"

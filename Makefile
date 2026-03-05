@@ -54,6 +54,7 @@ CLI_BASE_TEST?=0
 CLI_STATUS_TEST?=0
 CLI_HELP_TEST?=0
 CLI_JOB_TEST?=0
+CLI_HUB_TEST?=0
 
 ifeq ($(PANIC_TEST),1)
 CFLAGS += -DPANIC_TEST
@@ -234,6 +235,10 @@ endif
 
 ifeq ($(CLI_JOB_TEST),1)
 CFLAGS += -DCLI_JOB_TEST
+endif
+
+ifeq ($(CLI_HUB_TEST),1)
+CFLAGS += -DCLI_HUB_TEST
 endif
 
 all: $(BUILD)/finde-os.iso
