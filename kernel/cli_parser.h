@@ -13,6 +13,7 @@ typedef enum {
   CLI_AST_STATUS,
   CLI_AST_TICKS,
   CLI_AST_MALLOC,
+  CLI_AST_JOB,
   CLI_AST_CAP_LIST,
   CLI_AST_CAP_SHOW,
   CLI_AST_CAP_CHECK,
@@ -22,6 +23,8 @@ typedef enum {
 typedef struct {
   cli_ast_kind_t kind;
   const char* arg0;
+  const char* arg1;
+  const char* arg2;
 } cli_ast_t;
 
 typedef struct {

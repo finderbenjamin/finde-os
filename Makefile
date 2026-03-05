@@ -53,6 +53,7 @@ CLI_LAYERS_TEST?=0
 CLI_BASE_TEST?=0
 CLI_STATUS_TEST?=0
 CLI_HELP_TEST?=0
+CLI_JOB_TEST?=0
 
 ifeq ($(PANIC_TEST),1)
 CFLAGS += -DPANIC_TEST
@@ -231,6 +232,10 @@ ifeq ($(CLI_HELP_TEST),1)
 CFLAGS += -DCLI_HELP_TEST
 endif
 
+ifeq ($(CLI_JOB_TEST),1)
+CFLAGS += -DCLI_JOB_TEST
+endif
+
 all: $(BUILD)/finde-os.iso
 
 $(BUILD):
@@ -266,8 +271,11 @@ $(BUILD)/cli_parser.o: kernel/cli_parser.c kernel/cli_parser.h | $(BUILD)
 $(BUILD)/cli_validator.o: kernel/cli_validator.c kernel/cli_validator.h kernel/cli_parser.h kernel/cap.h | $(BUILD)
 	$(CC) $(CFLAGS) -c kernel/cli_validator.c -o $(BUILD)/cli_validator.o
 
-$(BUILD)/cli_executor.o: kernel/cli_executor.c kernel/cli_executor.h kernel/cli_validator.h kernel/cli_parser.h kernel/cap.h kernel/console.h kernel/heap.h kernel/idt.h | $(BUILD)
+$(BUILD)/cli_executor.o: kernel/cli_executor.c kernel/cli_executor.h kernel/cli_validator.h kernel/cli_parser.h kernel/cap.h kernel/console.h kernel/heap.h kernel/idt.h kernel/job.h | $(BUILD)
 	$(CC) $(CFLAGS) -c kernel/cli_executor.c -o $(BUILD)/cli_executor.o
+
+$(BUILD)/job.o: kernel/job.c kernel/job.h kernel/idt.h | $(BUILD)
+	$(CC) $(CFLAGS) -c kernel/job.c -o $(BUILD)/job.o
 
 $(BUILD)/vga.o: kernel/vga.c kernel/vga.h | $(BUILD)
 	$(CC) $(CFLAGS) -c kernel/vga.c -o $(BUILD)/vga.o
@@ -287,8 +295,8 @@ $(BUILD)/paging.o: kernel/paging.c kernel/paging.h | $(BUILD)
 $(BUILD)/cap.o: kernel/cap.c kernel/cap.h | $(BUILD)
 	$(CC) $(CFLAGS) -c kernel/cap.c -o $(BUILD)/cap.o
 
-$(BUILD)/kernel.elf: $(BUILD)/boot.o $(BUILD)/isr.o $(BUILD)/kernel.o $(BUILD)/panic.o $(BUILD)/serial.o $(BUILD)/idt.o $(BUILD)/heap.o $(BUILD)/shell.o $(BUILD)/cli_parser.o $(BUILD)/cli_validator.o $(BUILD)/cli_executor.o $(BUILD)/vga.o $(BUILD)/console.o $(BUILD)/keyboard.o $(BUILD)/pmm.o $(BUILD)/paging.o $(BUILD)/cap.o linker.ld
-	$(LD) $(LDFLAGS) $(BUILD)/boot.o $(BUILD)/isr.o $(BUILD)/kernel.o $(BUILD)/panic.o $(BUILD)/serial.o $(BUILD)/idt.o $(BUILD)/heap.o $(BUILD)/shell.o $(BUILD)/cli_parser.o $(BUILD)/cli_validator.o $(BUILD)/cli_executor.o $(BUILD)/vga.o $(BUILD)/console.o $(BUILD)/keyboard.o $(BUILD)/pmm.o $(BUILD)/paging.o $(BUILD)/cap.o -o $(BUILD)/kernel.elf
+$(BUILD)/kernel.elf: $(BUILD)/boot.o $(BUILD)/isr.o $(BUILD)/kernel.o $(BUILD)/panic.o $(BUILD)/serial.o $(BUILD)/idt.o $(BUILD)/heap.o $(BUILD)/shell.o $(BUILD)/cli_parser.o $(BUILD)/cli_validator.o $(BUILD)/cli_executor.o $(BUILD)/job.o $(BUILD)/vga.o $(BUILD)/console.o $(BUILD)/keyboard.o $(BUILD)/pmm.o $(BUILD)/paging.o $(BUILD)/cap.o linker.ld
+	$(LD) $(LDFLAGS) $(BUILD)/boot.o $(BUILD)/isr.o $(BUILD)/kernel.o $(BUILD)/panic.o $(BUILD)/serial.o $(BUILD)/idt.o $(BUILD)/heap.o $(BUILD)/shell.o $(BUILD)/cli_parser.o $(BUILD)/cli_validator.o $(BUILD)/cli_executor.o $(BUILD)/job.o $(BUILD)/vga.o $(BUILD)/console.o $(BUILD)/keyboard.o $(BUILD)/pmm.o $(BUILD)/paging.o $(BUILD)/cap.o -o $(BUILD)/kernel.elf
 
 $(BUILD)/finde-os.iso: $(BUILD)/kernel.elf boot/grub/grub.cfg
 	rm -rf $(ISO_DIR)
@@ -298,6 +306,6 @@ $(BUILD)/finde-os.iso: $(BUILD)/kernel.elf boot/grub/grub.cfg
 	grub-mkrescue -o $(BUILD)/finde-os.iso $(ISO_DIR) >/dev/null
 
 clean:
-	rm -rf $(BUILD) log.txt boot_log.txt panic_log.txt idt_log.txt timer_log.txt heap_log.txt shell_log.txt keyboard_log.txt vm_log.txt pmm_log.txt vmm_log.txt pf_log.txt nx_log.txt vga_log.txt edit_log.txt cap_log.txt cap_enforce_log.txt syscall_log.txt syscall_deny_log.txt task_log.txt task_cap_log.txt cap_gen_log.txt usermode_log.txt user_task_log.txt user_task_deny_log.txt drv_iso_log.txt microvm_log.txt microvm_cap_log.txt intervm_log.txt ipc_log.txt revoke_log.txt dos_guard_log.txt quota_log.txt cap_type_log.txt cap_lifecycle_log.txt ipc_platform_log.txt limits_log.txt usermode_path_log.txt microvm_mode_log.txt mode_manager_log.txt cli_security_log.txt cli_layers_log.txt cli_base_log.txt cli_status_log.txt
+	rm -rf $(BUILD) log.txt boot_log.txt panic_log.txt idt_log.txt timer_log.txt heap_log.txt shell_log.txt keyboard_log.txt vm_log.txt pmm_log.txt vmm_log.txt pf_log.txt nx_log.txt vga_log.txt edit_log.txt cap_log.txt cap_enforce_log.txt syscall_log.txt syscall_deny_log.txt task_log.txt task_cap_log.txt cap_gen_log.txt usermode_log.txt user_task_log.txt user_task_deny_log.txt drv_iso_log.txt microvm_log.txt microvm_cap_log.txt intervm_log.txt ipc_log.txt revoke_log.txt dos_guard_log.txt quota_log.txt cap_type_log.txt cap_lifecycle_log.txt ipc_platform_log.txt limits_log.txt usermode_path_log.txt microvm_mode_log.txt mode_manager_log.txt cli_security_log.txt cli_layers_log.txt cli_base_log.txt cli_status_log.txt cli_help_log.txt cli_job_log.txt
 
 .PHONY: all clean

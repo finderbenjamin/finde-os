@@ -63,6 +63,7 @@ static const char* suggest_command(const char* command) {
   if (command[0] == 't') return "ticks";
   if (command[0] == 'm') return "malloc";
   if (command[0] == 'c') return "cap";
+  if (command[0] == 'j') return "job";
   return "help";
 }
 
@@ -75,6 +76,8 @@ int cli_validate_ast(const cli_ast_t* ast, cli_mode_t mode, cli_validated_comman
   out->status = CLI_VALIDATE_OK;
   out->reason = "OK";
   out->handle = 0;
+  out->job_id = 0;
+  out->follow = 0;
   out->mode = mode;
   out->suggestion = 0;
 
@@ -91,13 +94,56 @@ int cli_validate_ast(const cli_ast_t* ast, cli_mode_t mode, cli_validated_comman
 
   if (ast->kind == CLI_AST_HELP && ast->arg0 != 0) {
     if (streq(ast->arg0, "help") || streq(ast->arg0, "status") || streq(ast->arg0, "ticks") || streq(ast->arg0, "malloc") ||
-        streq(ast->arg0, "cap") || streq(ast->arg0, "welcome") || streq(ast->arg0, "onboarding")) {
+        streq(ast->arg0, "cap") || streq(ast->arg0, "job") || streq(ast->arg0, "welcome") || streq(ast->arg0, "onboarding")) {
       return 1;
     }
 
     out->status = CLI_VALIDATE_SYNTAX;
     out->reason = "unknown help topic";
     out->suggestion = suggest_command(ast->arg0);
+    return 1;
+  }
+
+  if (ast->kind == CLI_AST_JOB) {
+    if (ast->arg0 == 0) {
+      out->status = CLI_VALIDATE_SYNTAX;
+      out->reason = "job requires subcommand";
+      return 1;
+    }
+
+    if (streq(ast->arg0, "list")) {
+      return 1;
+    }
+
+    if (streq(ast->arg0, "start")) {
+      if (ast->arg1 == 0 || *ast->arg1 == '\0') {
+        out->status = CLI_VALIDATE_SYNTAX;
+        out->reason = "job start requires <cmd>";
+      }
+      return 1;
+    }
+
+    if (streq(ast->arg0, "status") || streq(ast->arg0, "logs") || streq(ast->arg0, "stop")) {
+      if (!parse_u64(ast->arg1, &out->job_id)) {
+        out->status = CLI_VALIDATE_SYNTAX;
+        out->reason = "job id must be numeric";
+        return 1;
+      }
+
+      if (streq(ast->arg0, "logs") && ast->arg2 != 0) {
+        if (streq(ast->arg2, "--follow")) {
+          out->follow = 1;
+          return 1;
+        }
+
+        out->status = CLI_VALIDATE_SYNTAX;
+        out->reason = "job logs supports only --follow";
+      }
+      return 1;
+    }
+
+    out->status = CLI_VALIDATE_SYNTAX;
+    out->reason = "unknown job subcommand";
     return 1;
   }
 
