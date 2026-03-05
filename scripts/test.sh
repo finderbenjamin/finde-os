@@ -502,4 +502,19 @@ if ! tr -d '\r' < cli_status_log.txt | grep -Fq "CLI_STATUS_MARKER:MICROVM=STATU
   exit 1
 fi
 
+echo "[45/45] CLI global help + onboarding check"
+make clean
+make CLI_HELP_TEST=1
+run_qemu cli_help_log.txt
+
+if ! tr -d '' < cli_help_log.txt | grep -Fq "CLI_HELP_OK"; then
+  echo "Expected serial marker CLI_HELP_OK not found" >&2
+  exit 1
+fi
+
+if ! tr -d '' < cli_help_log.txt | grep -Fq "CLI_HELP_MARKER:SUGGEST=Did you mean 'help'?"; then
+  echo "Expected suggestion marker not found" >&2
+  exit 1
+fi
+
 echo "PASS"

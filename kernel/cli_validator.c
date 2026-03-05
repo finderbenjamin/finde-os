@@ -2,6 +2,17 @@
 
 #include "cap.h"
 
+static int streq(const char* a, const char* b) {
+  while (*a && *b) {
+    if (*a != *b) {
+      return 0;
+    }
+    ++a;
+    ++b;
+  }
+  return *a == '\0' && *b == '\0';
+}
+
 static int parse_u64(const char* s, uint64_t* value_out) {
   uint64_t value = 0;
   if (s == 0 || *s == '\0') {
@@ -41,6 +52,20 @@ static uint32_t op_to_rights(const char* operation) {
   return 0u;
 }
 
+static const char* suggest_command(const char* command) {
+  if (command == 0 || *command == '\0') {
+    return "help";
+  }
+
+  if (command[0] == 'h') return "help";
+  if (command[0] == 'w' || command[0] == 'o') return "welcome";
+  if (command[0] == 's') return "status";
+  if (command[0] == 't') return "ticks";
+  if (command[0] == 'm') return "malloc";
+  if (command[0] == 'c') return "cap";
+  return "help";
+}
+
 int cli_validate_ast(const cli_ast_t* ast, cli_mode_t mode, cli_validated_command_t* out) {
   if (ast == 0 || out == 0) {
     return 0;
@@ -51,6 +76,7 @@ int cli_validate_ast(const cli_ast_t* ast, cli_mode_t mode, cli_validated_comman
   out->reason = "OK";
   out->handle = 0;
   out->mode = mode;
+  out->suggestion = 0;
 
   if (ast->kind == CLI_AST_EMPTY) {
     return 1;
@@ -59,6 +85,19 @@ int cli_validate_ast(const cli_ast_t* ast, cli_mode_t mode, cli_validated_comman
   if (ast->kind == CLI_AST_UNKNOWN) {
     out->status = CLI_VALIDATE_SYNTAX;
     out->reason = "unknown command";
+    out->suggestion = suggest_command(ast->arg0);
+    return 1;
+  }
+
+  if (ast->kind == CLI_AST_HELP && ast->arg0 != 0) {
+    if (streq(ast->arg0, "help") || streq(ast->arg0, "status") || streq(ast->arg0, "ticks") || streq(ast->arg0, "malloc") ||
+        streq(ast->arg0, "cap") || streq(ast->arg0, "welcome") || streq(ast->arg0, "onboarding")) {
+      return 1;
+    }
+
+    out->status = CLI_VALIDATE_SYNTAX;
+    out->reason = "unknown help topic";
+    out->suggestion = suggest_command(ast->arg0);
     return 1;
   }
 

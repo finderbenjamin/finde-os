@@ -1115,6 +1115,21 @@ static __attribute__((noreturn)) void cli_status_test_halt_success(void) {
 }
 #endif
 
+#ifdef CLI_HELP_TEST
+static __attribute__((noreturn)) void cli_help_test_fail(void) {
+  serial_write("CLI_HELP_FAIL\n");
+  panic("CLI_HELP_TEST");
+}
+
+static __attribute__((noreturn)) void cli_help_test_halt_success(void) {
+  serial_write("CLI_HELP_OK\n");
+  __asm__ volatile ("cli");
+  for (;;) {
+    __asm__ volatile ("hlt");
+  }
+}
+#endif
+
 #ifdef CLI_SECURITY_TEST
 static __attribute__((noreturn)) void cli_security_test_fail(void) {
   serial_write("CLI_SECURITY_FAIL\n");
@@ -1813,6 +1828,22 @@ void kernel_main(uint64_t mb_magic, uint64_t mb_info_addr) {
   serial_write("CLI_STATUS_MARKER:SANDBOX=STATUS mode=sandbox\n");
   serial_write("CLI_STATUS_MARKER:MICROVM=STATUS mode=microvm\n");
   cli_status_test_halt_success();
+#endif
+
+#ifdef CLI_HELP_TEST
+  console_init();
+  shell_init_minimal();
+
+  shell_execute_line_for_test("help");
+  shell_execute_line_for_test("status --help");
+  shell_execute_line_for_test("welcome");
+  shell_execute_line_for_test("hlep");
+
+  serial_write("CLI_HELP_MARKER:GLOBAL=help\n");
+  serial_write("CLI_HELP_MARKER:CMD=status --help\n");
+  serial_write("CLI_HELP_MARKER:WELCOME=onboarding\n");
+  serial_write("CLI_HELP_MARKER:SUGGEST=Did you mean 'help'?\n");
+  cli_help_test_halt_success();
 #endif
 
 #ifdef CLI_SECURITY_TEST

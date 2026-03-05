@@ -20,6 +20,7 @@ typedef struct {
   cli_ast_t ast;
   cli_validate_status_t status;
   const char* reason;
+  const char* suggestion;
   uint64_t handle;
   cli_mode_t mode;
 } cli_validated_command_t;
