@@ -78,3 +78,5 @@
 45) CLI job command suite (start/list/status/logs/stop + deterministic output + state dir marker) test -> "CLI_JOB_OK"
 
 46) CLI hub/home TUI command (4 panels + shortcuts + scriptable actions) test -> "CLI_HUB_OK"
+
+47) CLI job profiles + capability explain UX (secure-by-default profile, deny next-step guidance) test -> "CLI_PROFILE_OK"
