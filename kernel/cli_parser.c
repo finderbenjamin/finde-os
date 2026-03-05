@@ -127,6 +127,12 @@ int cli_parse_line(const char* line, cli_parse_buffer_t* buffer, cli_ast_t* ast_
       ast_out->arg0 = buffer->tokens[2];
       return 1;
     }
+
+    if (buffer->token_count >= 3 && streq(buffer->tokens[1], "explain")) {
+      ast_out->kind = CLI_AST_CAP_EXPLAIN;
+      ast_out->arg0 = buffer->tokens[2];
+      return 1;
+    }
   }
 
   if (streq(buffer->tokens[0], "job")) {

@@ -18,6 +18,7 @@ typedef enum {
   CLI_AST_CAP_LIST,
   CLI_AST_CAP_SHOW,
   CLI_AST_CAP_CHECK,
+  CLI_AST_CAP_EXPLAIN,
   CLI_AST_UNKNOWN,
 } cli_ast_kind_t;
 

@@ -1,6 +1,7 @@
 #include "cli_validator.h"
 
 #include "cap.h"
+#include "job.h"
 
 static int streq(const char* a, const char* b) {
   while (*a && *b) {
@@ -78,6 +79,7 @@ int cli_validate_ast(const cli_ast_t* ast, cli_mode_t mode, cli_validated_comman
   out->handle = 0;
   out->job_id = 0;
   out->follow = 0;
+  out->profile = JOB_PROFILE_ISOLATED;
   out->mode = mode;
   out->suggestion = 0;
 
@@ -136,7 +138,27 @@ int cli_validate_ast(const cli_ast_t* ast, cli_mode_t mode, cli_validated_comman
       if (ast->arg1 == 0 || *ast->arg1 == '\0') {
         out->status = CLI_VALIDATE_SYNTAX;
         out->reason = "job start requires <cmd>";
+        return 1;
       }
+
+      if (ast->arg2 == 0) {
+        out->profile = JOB_PROFILE_ISOLATED;
+        return 1;
+      }
+
+      if (ast->arg2[0] == '-' && ast->arg2[1] == '-' && ast->arg2[2] == 'p' && ast->arg2[3] == 'r' && ast->arg2[4] == 'o' &&
+          ast->arg2[5] == 'f' && ast->arg2[6] == 'i' && ast->arg2[7] == 'l' && ast->arg2[8] == 'e' && ast->arg2[9] == '=') {
+        if (job_profile_from_flag(&ast->arg2[10], &out->profile)) {
+          return 1;
+        }
+
+        out->status = CLI_VALIDATE_SYNTAX;
+        out->reason = "job start profile must be --profile=default|isolated";
+        return 1;
+      }
+
+      out->status = CLI_VALIDATE_SYNTAX;
+      out->reason = "job start supports only optional --profile=default|isolated";
       return 1;
     }
 
@@ -170,6 +192,16 @@ int cli_validate_ast(const cli_ast_t* ast, cli_mode_t mode, cli_validated_comman
     return 1;
   }
 
+
+  if (ast->kind == CLI_AST_CAP_EXPLAIN) {
+    if (!job_profile_from_flag(ast->arg0, &out->profile)) {
+      out->status = CLI_VALIDATE_SYNTAX;
+      out->reason = "cap explain requires profile default|isolated";
+      return 1;
+    }
+    return 1;
+  }
+
   if (ast->kind == CLI_AST_CAP_SHOW) {
     uint64_t handle;
     if (!parse_u64(ast->arg0, &handle)) {
@@ -179,8 +211,8 @@ int cli_validate_ast(const cli_ast_t* ast, cli_mode_t mode, cli_validated_comman
     }
 
     if (cap_audit(handle, 0, 0, 0) == 0) {
-      out->status = CLI_VALIDATE_DENY;
-      out->reason = cap_deny_reason();
+      out->status = CLI_VALIDATE_SYNTAX;
+      out->reason = "cap check requires read|write|exec";
       return 1;
     }
 
@@ -191,8 +223,8 @@ int cli_validate_ast(const cli_ast_t* ast, cli_mode_t mode, cli_validated_comman
   if (ast->kind == CLI_AST_CAP_CHECK) {
     uint32_t rights = op_to_rights(ast->arg0);
     if (rights == 0u) {
-      out->status = CLI_VALIDATE_DENY;
-      out->reason = cap_deny_reason();
+      out->status = CLI_VALIDATE_SYNTAX;
+      out->reason = "cap check requires read|write|exec";
       return 1;
     }
 

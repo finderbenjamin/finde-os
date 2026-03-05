@@ -142,11 +142,12 @@ static void print_help_topic(const char* topic) {
   if (streq(topic, "cap")) {
     console_write("cap\n");
     console_write("  Zweck: Capability-Status anzeigen und pruefen.\n");
-    console_write("  Syntax: cap list|show <id>|check <read|write|exec>\n");
+    console_write("  Syntax: cap list|show <id>|check <read|write|exec>|explain <profile>\n");
     console_write("  Beispiele:\n");
     console_write("    cap list\n");
     console_write("    cap show 5\n");
     console_write("    cap check write\n");
+    console_write("    cap explain isolated\n");
     console_write("  Exit-Codes: 0 ok, 2 Syntax, 3 Zugriff verweigert\n");
     return;
   }
@@ -154,7 +155,7 @@ static void print_help_topic(const char* topic) {
   if (streq(topic, "job")) {
     console_write("job\n");
     console_write("  Zweck: Einfache Hintergrund-Jobs verwalten.\n");
-    console_write("  Syntax: job start <cmd>|list|status <id>|logs <id> [--follow]|stop <id>\n");
+    console_write("  Syntax: job start <cmd> [--profile=default|isolated]|list|status <id>|logs <id> [--follow]|stop <id>\n");
     console_write("  Beispiele:\n");
     console_write("    job start worker\n");
     console_write("    job list\n");
@@ -215,6 +216,19 @@ static void write_job_status(job_status_t status) {
     console_write("stopped");
   }
 }
+
+static void write_security_summary(job_profile_t profile) {
+  console_write("JOB_SECURITY profile=");
+  console_write(job_profile_name(profile));
+  console_write(" granted=");
+  write_rights(job_profile_granted_rights(profile));
+  console_write(" blocked=");
+  write_rights(job_profile_blocked_rights(profile));
+  console_write(" why=");
+  console_write(job_profile_reason(profile));
+  console_write("\n");
+}
+
 
 static void hub_footer(void) {
   console_write("Shortcuts: [j] Jobs [l] Logs [r] Retry [q] Quit\n");
@@ -330,7 +344,7 @@ void cli_execute_validated(const cli_validated_command_t* cmd) {
     job_record_t rec;
 
     if (streq(cmd->ast.arg0, "start")) {
-      if (job_start(cmd->ast.arg1, &rec) == 0) {
+      if (job_start(cmd->ast.arg1, cmd->profile, &rec) == 0) {
         console_write("JOB_ERROR code=1 message=job start failed\n");
         console_write("JOB_EXIT code=1\n");
         return;
@@ -343,16 +357,22 @@ void cli_execute_validated(const cli_validated_command_t* cmd) {
       write_u64(rec.handle);
       console_write(" status=");
       write_job_status(rec.status);
+      console_write(" profile=");
+      console_write(job_profile_name(rec.profile));
+      console_write(" profile=");
+      console_write(job_profile_name(rec.profile));
       console_write(" start=");
       write_u64(rec.start_ticks);
       console_write(" state_dir=");
       console_write(job_state_dir());
-      console_write("\nJOB_EXIT code=0\n");
+      console_write("\n");
+      write_security_summary(rec.profile);
+      console_write("JOB_EXIT code=0\n");
       return;
     }
 
     if (streq(cmd->ast.arg0, "list")) {
-      console_write("JOB_LIST_HEADER id|name|handle|status|start|last_output|state_dir\n");
+      console_write("JOB_LIST_HEADER id|name|handle|status|profile|start|last_output|state_dir\n");
       for (int i = 0; i < job_count(); ++i) {
         if (job_at(i, &rec) == 0) {
           continue;
@@ -364,6 +384,8 @@ void cli_execute_validated(const cli_validated_command_t* cmd) {
         write_u64(rec.handle);
         console_write("|");
         write_job_status(rec.status);
+        console_write("|");
+        console_write(job_profile_name(rec.profile));
         console_write("|");
         write_u64(rec.start_ticks);
         console_write("|");
@@ -391,6 +413,10 @@ void cli_execute_validated(const cli_validated_command_t* cmd) {
       write_u64(rec.handle);
       console_write(" status=");
       write_job_status(rec.status);
+      console_write(" profile=");
+      console_write(job_profile_name(rec.profile));
+      console_write(" profile=");
+      console_write(job_profile_name(rec.profile));
       console_write(" start=");
       write_u64(rec.start_ticks);
       console_write(" last_output=");
@@ -434,6 +460,8 @@ void cli_execute_validated(const cli_validated_command_t* cmd) {
       write_u64(rec.id);
       console_write(" status=");
       write_job_status(rec.status);
+      console_write(" profile=");
+      console_write(job_profile_name(rec.profile));
       console_write("\nJOB_EXIT code=0\n");
       return;
     }
@@ -510,6 +538,19 @@ void cli_execute_validated(const cli_validated_command_t* cmd) {
     return;
   }
 
+  if (cmd->ast.kind == CLI_AST_CAP_EXPLAIN) {
+    console_write("CAP_EXPLAIN profile=");
+    console_write(job_profile_name(cmd->profile));
+    console_write(" granted=");
+    write_rights(job_profile_granted_rights(cmd->profile));
+    console_write(" blocked=");
+    write_rights(job_profile_blocked_rights(cmd->profile));
+    console_write(" why=");
+    console_write(job_profile_reason(cmd->profile));
+    console_write("\n");
+    return;
+  }
+
   if (cmd->ast.kind == CLI_AST_CAP_SHOW) {
     cap_snapshot_t snap;
     if (cap_audit(cmd->handle, &snap.type, &snap.rights, &snap.generation) == 0) {
@@ -535,6 +576,8 @@ void cli_execute_validated(const cli_validated_command_t* cmd) {
     if (rights == 0u || cmd->handle == 0) {
       console_write(" result=DENY reason=");
       console_write(cap_deny_reason());
+      console_write(" next=");
+      console_write(job_profile_next_step(JOB_PROFILE_ISOLATED, rights));
       console_write("\n");
       return;
     }

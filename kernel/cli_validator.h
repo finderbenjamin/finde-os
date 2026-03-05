@@ -4,6 +4,7 @@
 #include <stdint.h>
 
 #include "cli_parser.h"
+#include "job.h"
 
 typedef enum {
   CLI_MODE_SANDBOX = 0,
@@ -24,6 +25,7 @@ typedef struct {
   uint64_t handle;
   uint64_t job_id;
   int follow;
+  job_profile_t profile;
   cli_mode_t mode;
 } cli_validated_command_t;
 

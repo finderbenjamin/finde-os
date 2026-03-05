@@ -517,7 +517,7 @@ if ! tr -d '\r' < cli_help_log.txt | grep -Fq "CLI_HELP_MARKER:SUGGEST=Did you m
   exit 1
 fi
 
-echo "[46/46] CLI job command check"
+echo "[46/48] CLI job command check"
 make clean
 make CLI_JOB_TEST=1
 run_qemu cli_job_log.txt
@@ -532,18 +532,38 @@ if ! tr -d '\r' < cli_job_log.txt | grep -Fq "CLI_JOB_MARKER:NOT_FOUND=JOB_ERROR
   exit 1
 fi
 
-echo "[47/47] CLI hub command check"
+echo "[47/48] CLI hub command check"
 make clean
 make CLI_HUB_TEST=1
 run_qemu cli_hub_log.txt
 
 if ! tr -d '\r' < cli_hub_log.txt | grep -Fq "CLI_HUB_OK"; then
   echo "Expected serial marker CLI_HUB_OK not found" >&2
-if ! tr -d '\r' < cli_hub_log.txt | grep -Fq "CLI_HUB_MARKER:FOOTER=Shortcuts: [j] Jobs [l] Logs [r] Retry [q] Quit"; then
-  echo "Expected hub footer marker not found" >&2
+  exit 1
 fi
 
-if ! tr -d '' < cli_help_log.txt | grep -Fq "CLI_HELP_MARKER:SUGGEST=Did you mean 'help'?"; then
+if ! tr -d '\r' < cli_hub_log.txt | grep -Fq "CLI_HUB_MARKER:FOOTER=Shortcuts: [j] Jobs [l] Logs [r] Retry [q] Quit"; then
+  echo "Expected hub footer marker not found" >&2
+  exit 1
+fi
+
+echo "[48/48] CLI profile/capability UX check"
+make clean
+make CLI_PROFILE_TEST=1
+run_qemu cli_profile_log.txt
+
+if ! tr -d '\r' < cli_profile_log.txt | grep -Fq "CLI_PROFILE_OK"; then
+  echo "Expected serial marker CLI_PROFILE_OK not found" >&2
+  exit 1
+fi
+
+if ! tr -d '\r' < cli_profile_log.txt | grep -Fq "CLI_PROFILE_MARKER:DEFAULT_SECURE=JOB_START id=1 name=worker"; then
+  echo "Expected secure default marker not found" >&2
+  exit 1
+fi
+
+if ! tr -d '\r' < cli_profile_log.txt | grep -Fq "CLI_PROFILE_MARKER:EXPLAIN=CAP_EXPLAIN profile=isolated"; then
+  echo "Expected cap explain marker not found" >&2
   echo "Expected suggestion marker not found" >&2
   exit 1
 fi

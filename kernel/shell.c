@@ -4,6 +4,7 @@
 #include "cli_parser.h"
 #include "cli_validator.h"
 #include "console.h"
+#include "job.h"
 
 static char g_line[CLI_MAX_LINE + 1];
 static size_t g_cursor = 0;
@@ -53,9 +54,9 @@ void shell_execute_line_for_test(const char* line) {
 
   if (validated.status == CLI_VALIDATE_DENY) {
     if (ast.kind == CLI_AST_CAP_SHOW) {
-      console_write("CAP_SHOW deny=");
+      console_write("CAP_SHOW result=DENY reason=");
       console_write(validated.reason);
-      console_write("\n");
+      console_write(" next=use cap list then cap explain <profile>\n");
       return;
     }
 
@@ -66,13 +67,15 @@ void shell_execute_line_for_test(const char* line) {
       }
       console_write(" result=DENY reason=");
       console_write(validated.reason);
+      console_write(" next=");
+      console_write(job_profile_next_step(validated.profile, 0));
       console_write("\n");
       return;
     }
 
     console_write("CLI_DENY reason=");
     console_write(validated.reason);
-    console_write("\n");
+    console_write(" next=run help for valid syntax\n");
     return;
   }
 
