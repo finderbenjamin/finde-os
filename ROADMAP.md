@@ -72,3 +72,5 @@
 42) CLI baseline command pipeline smoke test -> "CLI_BASE_OK"
 
 43) CLI status command (sandbox/microvm visibility + deterministic marker) test -> "CLI_STATUS_OK"
+
+44) CLI global help/onboarding UX + unknown-command suggestion test -> "CLI_HELP_OK"

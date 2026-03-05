@@ -35,6 +35,11 @@ void shell_execute_line_for_test(const char* line) {
   if (validated.status == CLI_VALIDATE_SYNTAX) {
     console_write("CLI_ERROR stage=validate reason=");
     console_write(validated.reason);
+    if (validated.suggestion != 0) {
+      console_write(". Did you mean '");
+      console_write(validated.suggestion);
+      console_write("'? ");
+    }
     console_write("\n");
     return;
   }

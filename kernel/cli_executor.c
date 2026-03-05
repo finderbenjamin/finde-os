@@ -7,6 +7,17 @@
 #include "heap.h"
 #include "idt.h"
 
+static int streq(const char* a, const char* b) {
+  while (*a && *b) {
+    if (*a != *b) {
+      return 0;
+    }
+    ++a;
+    ++b;
+  }
+  return *a == '\0' && *b == '\0';
+}
+
 static void write_u64(uint64_t value) {
   char buf[21];
   size_t i = 0;
@@ -81,6 +92,93 @@ static uint32_t op_to_rights(const char* operation) {
   return 0u;
 }
 
+static void print_help_topic(const char* topic) {
+  if (topic == 0 || streq(topic, "help")) {
+    console_write("help\n");
+    console_write("  Zweck: Zeigt Hilfe fuer alle Befehle oder ein Thema.\n");
+    console_write("  Syntax: help [command]\n");
+    console_write("  Beispiele:\n");
+    console_write("    help\n");
+    console_write("    help status\n");
+    console_write("    cap --help\n");
+    console_write("  Exit-Codes: 0 ok, 2 unbekanntes Thema\n");
+    return;
+  }
+
+  if (streq(topic, "status")) {
+    console_write("status\n");
+    console_write("  Zweck: Zeigt den aktiven Isolationsmodus.\n");
+    console_write("  Syntax: status\n");
+    console_write("  Beispiele:\n");
+    console_write("    status\n");
+    console_write("    help status\n");
+    console_write("  Exit-Codes: 0 ok\n");
+    return;
+  }
+
+  if (streq(topic, "ticks")) {
+    console_write("ticks\n");
+    console_write("  Zweck: Zeigt aktuelle Timer-Ticks seit Boot.\n");
+    console_write("  Syntax: ticks\n");
+    console_write("  Beispiele:\n");
+    console_write("    ticks\n");
+    console_write("    ticks --help\n");
+    console_write("  Exit-Codes: 0 ok\n");
+    return;
+  }
+
+  if (streq(topic, "malloc")) {
+    console_write("malloc\n");
+    console_write("  Zweck: Testet Heap-Allokation und zeigt Adressen.\n");
+    console_write("  Syntax: malloc\n");
+    console_write("  Beispiele:\n");
+    console_write("    malloc\n");
+    console_write("    malloc --help\n");
+    console_write("  Exit-Codes: 0 ok, 3 in microvm verweigert\n");
+    return;
+  }
+
+  if (streq(topic, "cap")) {
+    console_write("cap\n");
+    console_write("  Zweck: Capability-Status anzeigen und pruefen.\n");
+    console_write("  Syntax: cap list|show <id>|check <read|write|exec>\n");
+    console_write("  Beispiele:\n");
+    console_write("    cap list\n");
+    console_write("    cap show 5\n");
+    console_write("    cap check write\n");
+    console_write("  Exit-Codes: 0 ok, 2 Syntax, 3 Zugriff verweigert\n");
+    return;
+  }
+
+  if (streq(topic, "welcome") || streq(topic, "onboarding")) {
+    console_write("welcome|onboarding\n");
+    console_write("  Zweck: Einstieg mit 5 wichtigsten Workflows.\n");
+    console_write("  Syntax: welcome\n");
+    console_write("  Beispiele:\n");
+    console_write("    welcome\n");
+    console_write("    onboarding\n");
+    console_write("  Exit-Codes: 0 ok\n");
+    return;
+  }
+
+  console_write("help\n");
+  console_write("  Zweck: Zeigt Hilfe fuer alle Befehle oder ein Thema.\n");
+  console_write("  Syntax: help [command]\n");
+  console_write("  Beispiele:\n");
+  console_write("    help\n");
+  console_write("    help status\n");
+  console_write("  Exit-Codes: 0 ok, 2 unbekanntes Thema\n");
+}
+
+static void print_onboarding(void) {
+  console_write("Willkommen bei finde-os (shell-first).\n");
+  console_write("1) Hilfe entdecken: help\n");
+  console_write("2) Modus pruefen: status\n");
+  console_write("3) Zeit pruefen: ticks\n");
+  console_write("4) Rechte ansehen: cap list, cap show <id>\n");
+  console_write("5) Rechte testen: cap check read|write|exec\n");
+}
+
 void cli_execute_validated(const cli_validated_command_t* cmd) {
   if (cmd == 0 || cmd->status != CLI_VALIDATE_OK) {
     return;
@@ -91,7 +189,12 @@ void cli_execute_validated(const cli_validated_command_t* cmd) {
   }
 
   if (cmd->ast.kind == CLI_AST_HELP) {
-    console_write("commands: help status ticks malloc cap list|show|check\n");
+    print_help_topic(cmd->ast.arg0);
+    return;
+  }
+
+  if (cmd->ast.kind == CLI_AST_ONBOARDING) {
+    print_onboarding();
     return;
   }
 
