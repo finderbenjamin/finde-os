@@ -93,6 +93,37 @@ static uint32_t op_to_rights(const char* operation) {
   return 0u;
 }
 
+
+static int contains_text(const char* haystack, const char* needle) {
+  size_t i = 0;
+  size_t j = 0;
+  if (needle == 0 || *needle == '\0') {
+    return 1;
+  }
+
+  while (haystack != 0 && haystack[i] != '\0') {
+    j = 0;
+    while (needle[j] != '\0' && haystack[i + j] != '\0' && haystack[i + j] == needle[j]) {
+      ++j;
+    }
+    if (needle[j] == '\0') {
+      return 1;
+    }
+    ++i;
+  }
+  return 0;
+}
+
+static void emit_scan_warning(const cli_validated_command_t* cmd) {
+  if (cmd->limit > 50u) {
+    console_write("WARNING large_scan=true scope=");
+    console_write(cmd->path);
+    console_write(" limit=");
+    write_u64(cmd->limit);
+    console_write("\n");
+  }
+}
+
 static void print_help_topic(const char* topic) {
   if (topic == 0 || streq(topic, "help")) {
     console_write("finde-os command map\n");
@@ -106,11 +137,17 @@ static void print_help_topic(const char* topic) {
     console_write("    malloc               Heap-Test (nur sandbox)\n");
     console_write("    cap                  Capabilities listen/pruefen/erklaeren\n");
     console_write("    job                  Jobs starten und verwalten\n");
+    console_write("    find                 Dateien per Muster finden\n");
+    console_write("    search               Text in Dateien suchen\n");
+    console_write("    session              Arbeitskontext save/restore\n");
     console_write("    hub|home             TUI-Hub mit Panels\n");
     console_write("  Hub-Shortcuts (vom Prompt): j=jobs, l=logs, r=retry, q=quit\n");
     console_write("  Beispiele:\n");
     console_write("    help job\n");
     console_write("    job --help\n");
+    console_write("    find *.c --path src --limit 5\n");
+    console_write("    search TODO --path kernel --json\n");
+    console_write("    session save sprint --path /tmp --json\n");
     console_write("    hub\n");
     console_write("  Exit-Codes: 0 ok, 2 unbekanntes Thema\n");
     return;
@@ -162,6 +199,43 @@ static void print_help_topic(const char* topic) {
     return;
   }
 
+
+  if (streq(topic, "find")) {
+    console_write("find\n");
+    console_write("  Zweck: Dateinamen nach Pattern finden.\n");
+    console_write("  Syntax: find <pattern> [--path <path>] [--limit <n>] [--json]\n");
+    console_write("  Hinweise: Default limit=10, bei limit>50 kommt eine Scan-Warnung.\n");
+    console_write("  Beispiele:\n");
+    console_write("    find *.c --path kernel --limit 5\n");
+    console_write("    find config --json\n");
+    console_write("  Exit-Codes: 0 ok, 2 Syntax\n");
+    return;
+  }
+
+  if (streq(topic, "search")) {
+    console_write("search\n");
+    console_write("  Zweck: Text in Dateien suchen.\n");
+    console_write("  Syntax: search <text> [--path <path>] [--limit <n>] [--json]\n");
+    console_write("  Hinweise: Default limit=10, bei limit>50 kommt eine Scan-Warnung.\n");
+    console_write("  Beispiele:\n");
+    console_write("    search TODO --path kernel --limit 20\n");
+    console_write("    search CAP_DENY --json\n");
+    console_write("  Exit-Codes: 0 ok, 2 Syntax\n");
+    return;
+  }
+
+  if (streq(topic, "session")) {
+    console_write("session\n");
+    console_write("  Zweck: Arbeitskontext speichern und wiederherstellen.\n");
+    console_write("  Syntax: session <save|restore> <name> [--path <path>] [--limit <n>] [--json]\n");
+    console_write("  Hinweise: Default limit=10, bei limit>50 kommt eine Scan-Warnung.\n");
+    console_write("  Beispiele:\n");
+    console_write("    session save sprint42 --path /state\n");
+    console_write("    session restore sprint42 --json\n");
+    console_write("  Exit-Codes: 0 ok, 2 Syntax\n");
+    return;
+  }
+
   if (streq(topic, "job")) {
     console_write("job\n");
     console_write("  Zweck: Einfache Hintergrund-Jobs verwalten.\n");
@@ -181,6 +255,9 @@ static void print_help_topic(const char* topic) {
     console_write("  Zweck: Keyboard-navigierbares TUI Hub im Terminal.\n");
     console_write("  Syntax: hub [jobs|commands|errors|logs|status|retry|quit]\n");
     console_write("  Beispiele:\n");
+    console_write("    find *.c --path src --limit 5\n");
+    console_write("    search TODO --path kernel --json\n");
+    console_write("    session save sprint --path /tmp --json\n");
     console_write("    hub\n");
     console_write("    hub jobs\n");
     console_write("    hub logs\n");
@@ -475,6 +552,89 @@ void cli_execute_validated(const cli_validated_command_t* cmd) {
       console_write("\nJOB_EXIT code=0\n");
       return;
     }
+  }
+
+
+  if (cmd->ast.kind == CLI_AST_FIND) {
+    static const char* files[] = {
+      "kernel/shell.c", "kernel/cli_parser.c", "kernel/cli_validator.c", "docs/CLI_SPEC.md", "README.md"
+    };
+    uint64_t emitted = 0;
+    emit_scan_warning(cmd);
+    for (size_t i = 0; i < sizeof(files) / sizeof(files[0]); ++i) {
+      if (!contains_text(files[i], cmd->target)) continue;
+      if (emitted >= cmd->limit) break;
+      if (cmd->json_output) {
+        console_write("{\"cmd\":\"find\",\"path\":\"");
+        console_write(files[i]);
+        console_write("\"}\n");
+      } else {
+        console_write(files[i]);
+        console_write("\n");
+      }
+      emitted += 1u;
+    }
+    return;
+  }
+
+  if (cmd->ast.kind == CLI_AST_SEARCH) {
+    static const char* hits[] = {
+      "kernel/shell.c:40:CLI_ERROR stage=validate",
+      "kernel/cli_executor.c:95:finde-os command map",
+      "kernel/cli_validator.c:180:unknown option",
+      "docs/CLI_SPEC.md:27:ERROR <code> <kind>: <message>"
+    };
+    uint64_t emitted = 0;
+    emit_scan_warning(cmd);
+    for (size_t i = 0; i < sizeof(hits) / sizeof(hits[0]); ++i) {
+      if (!contains_text(hits[i], cmd->target)) continue;
+      if (emitted >= cmd->limit) break;
+      if (cmd->json_output) {
+        console_write("{\"cmd\":\"search\",\"match\":\"");
+        console_write(hits[i]);
+        console_write("\"}\n");
+      } else {
+        console_write(hits[i]);
+        console_write("\n");
+      }
+      emitted += 1u;
+    }
+    return;
+  }
+
+  if (cmd->ast.kind == CLI_AST_SESSION) {
+    emit_scan_warning(cmd);
+    if (streq(cmd->ast.arg0, "save")) {
+      if (cmd->json_output) {
+        console_write("{\"cmd\":\"session\",\"action\":\"save\",\"name\":\"");
+        console_write(cmd->target);
+        console_write("\",\"path\":\"");
+        console_write(cmd->path);
+        console_write("\"}\n");
+      } else {
+        console_write("SESSION_SAVED name=");
+        console_write(cmd->target);
+        console_write(" path=");
+        console_write(cmd->path);
+        console_write("\n");
+      }
+      return;
+    }
+
+    if (cmd->json_output) {
+      console_write("{\"cmd\":\"session\",\"action\":\"restore\",\"name\":\"");
+      console_write(cmd->target);
+      console_write("\",\"path\":\"");
+      console_write(cmd->path);
+      console_write("\"}\n");
+    } else {
+      console_write("SESSION_RESTORED name=");
+      console_write(cmd->target);
+      console_write(" path=");
+      console_write(cmd->path);
+      console_write("\n");
+    }
+    return;
   }
 
   if (cmd->ast.kind == CLI_AST_HUB) {

@@ -57,6 +57,7 @@ CLI_JOB_TEST?=0
 CLI_HUB_TEST?=0
 CLI_PROFILE_TEST?=0
 CLI_DISCOVERY_TEST?=0
+CLI_WORKFLOW_TEST?=0
 
 ifeq ($(PANIC_TEST),1)
 CFLAGS += -DPANIC_TEST
@@ -251,6 +252,10 @@ ifeq ($(CLI_DISCOVERY_TEST),1)
 CFLAGS += -DCLI_DISCOVERY_TEST
 endif
 
+ifeq ($(CLI_WORKFLOW_TEST),1)
+CFLAGS += -DCLI_WORKFLOW_TEST
+endif
+
 all: $(BUILD)/finde-os.iso
 
 $(BUILD):
@@ -321,6 +326,6 @@ $(BUILD)/finde-os.iso: $(BUILD)/kernel.elf boot/grub/grub.cfg
 	grub-mkrescue -o $(BUILD)/finde-os.iso $(ISO_DIR) >/dev/null
 
 clean:
-	rm -rf $(BUILD) log.txt boot_log.txt panic_log.txt idt_log.txt timer_log.txt heap_log.txt shell_log.txt keyboard_log.txt vm_log.txt pmm_log.txt vmm_log.txt pf_log.txt nx_log.txt vga_log.txt edit_log.txt cap_log.txt cap_enforce_log.txt syscall_log.txt syscall_deny_log.txt task_log.txt task_cap_log.txt cap_gen_log.txt usermode_log.txt user_task_log.txt user_task_deny_log.txt drv_iso_log.txt microvm_log.txt microvm_cap_log.txt intervm_log.txt ipc_log.txt revoke_log.txt dos_guard_log.txt quota_log.txt cap_type_log.txt cap_lifecycle_log.txt ipc_platform_log.txt limits_log.txt usermode_path_log.txt microvm_mode_log.txt mode_manager_log.txt cli_security_log.txt cli_layers_log.txt cli_base_log.txt cli_status_log.txt cli_help_log.txt cli_job_log.txt
+	rm -rf $(BUILD) log.txt boot_log.txt panic_log.txt idt_log.txt timer_log.txt heap_log.txt shell_log.txt keyboard_log.txt vm_log.txt pmm_log.txt vmm_log.txt pf_log.txt nx_log.txt vga_log.txt edit_log.txt cap_log.txt cap_enforce_log.txt syscall_log.txt syscall_deny_log.txt task_log.txt task_cap_log.txt cap_gen_log.txt usermode_log.txt user_task_log.txt user_task_deny_log.txt drv_iso_log.txt microvm_log.txt microvm_cap_log.txt intervm_log.txt ipc_log.txt revoke_log.txt dos_guard_log.txt quota_log.txt cap_type_log.txt cap_lifecycle_log.txt ipc_platform_log.txt limits_log.txt usermode_path_log.txt microvm_mode_log.txt mode_manager_log.txt cli_security_log.txt cli_layers_log.txt cli_base_log.txt cli_status_log.txt cli_help_log.txt cli_job_log.txt cli_workflow_log.txt
 
 .PHONY: all clean

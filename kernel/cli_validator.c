@@ -65,7 +65,63 @@ static const char* suggest_command(const char* command) {
   if (command[0] == 'm') return "malloc";
   if (command[0] == 'c') return "cap";
   if (command[0] == 'j') return "job";
+  if (command[0] == 'f') return "find";
   return "help";
+}
+
+static const char* ast_arg_at(const cli_ast_t* ast, int idx) {
+  if (idx == 0) return ast->arg0;
+  if (idx == 1) return ast->arg1;
+  if (idx == 2) return ast->arg2;
+  if (idx == 3) return ast->arg3;
+  if (idx == 4) return ast->arg4;
+  if (idx == 5) return ast->arg5;
+  if (idx == 6) return ast->arg6;
+  return 0;
+}
+
+static int parse_common_options(const cli_ast_t* ast, int start_idx, cli_validated_command_t* out, const char** reason_out) {
+  int i = start_idx;
+  while (i <= 6) {
+    const char* arg = ast_arg_at(ast, i);
+    if (arg == 0) {
+      return 1;
+    }
+
+    if (streq(arg, "--json")) {
+      out->json_output = 1;
+      i += 1;
+      continue;
+    }
+
+    if (streq(arg, "--limit")) {
+      uint64_t parsed = 0;
+      const char* val = ast_arg_at(ast, i + 1);
+      if (!parse_u64(val, &parsed) || parsed == 0u) {
+        *reason_out = "--limit requires positive number";
+        return 0;
+      }
+      out->limit = parsed;
+      i += 2;
+      continue;
+    }
+
+    if (streq(arg, "--path")) {
+      const char* val = ast_arg_at(ast, i + 1);
+      if (val == 0 || *val == '\0') {
+        *reason_out = "--path requires a value";
+        return 0;
+      }
+      out->path = val;
+      i += 2;
+      continue;
+    }
+
+    *reason_out = "unknown option";
+    return 0;
+  }
+
+  return 1;
 }
 
 int cli_validate_ast(const cli_ast_t* ast, cli_mode_t mode, cli_validated_command_t* out) {
@@ -82,6 +138,10 @@ int cli_validate_ast(const cli_ast_t* ast, cli_mode_t mode, cli_validated_comman
   out->profile = JOB_PROFILE_ISOLATED;
   out->mode = mode;
   out->suggestion = 0;
+  out->json_output = 0;
+  out->limit = 10u;
+  out->path = ".";
+  out->target = 0;
 
   if (ast->kind == CLI_AST_EMPTY) {
     return 1;
@@ -97,7 +157,8 @@ int cli_validate_ast(const cli_ast_t* ast, cli_mode_t mode, cli_validated_comman
   if (ast->kind == CLI_AST_HELP && ast->arg0 != 0) {
     if (streq(ast->arg0, "help") || streq(ast->arg0, "status") || streq(ast->arg0, "ticks") || streq(ast->arg0, "malloc") ||
         streq(ast->arg0, "cap") || streq(ast->arg0, "job") || streq(ast->arg0, "hub") || streq(ast->arg0, "home") ||
-        streq(ast->arg0, "welcome") || streq(ast->arg0, "onboarding")) {
+        streq(ast->arg0, "welcome") || streq(ast->arg0, "onboarding") || streq(ast->arg0, "find") || streq(ast->arg0, "search") ||
+        streq(ast->arg0, "session")) {
       return 1;
     }
 
@@ -107,6 +168,44 @@ int cli_validate_ast(const cli_ast_t* ast, cli_mode_t mode, cli_validated_comman
     return 1;
   }
 
+  if (ast->kind == CLI_AST_FIND || ast->kind == CLI_AST_SEARCH) {
+    const char* reason = 0;
+    if (ast->arg0 == 0 || *ast->arg0 == '\0') {
+      out->status = CLI_VALIDATE_SYNTAX;
+      out->reason = ast->kind == CLI_AST_FIND ? "find requires <pattern>" : "search requires <text>";
+      return 1;
+    }
+
+    out->target = ast->arg0;
+    if (!parse_common_options(ast, 1, out, &reason)) {
+      out->status = CLI_VALIDATE_SYNTAX;
+      out->reason = reason;
+      return 1;
+    }
+    return 1;
+  }
+
+  if (ast->kind == CLI_AST_SESSION) {
+    const char* reason = 0;
+    if (ast->arg0 == 0 || (!streq(ast->arg0, "save") && !streq(ast->arg0, "restore"))) {
+      out->status = CLI_VALIDATE_SYNTAX;
+      out->reason = "session requires save|restore";
+      return 1;
+    }
+    if (ast->arg1 == 0 || *ast->arg1 == '\0') {
+      out->status = CLI_VALIDATE_SYNTAX;
+      out->reason = "session save|restore requires <name>";
+      return 1;
+    }
+
+    out->target = ast->arg1;
+    if (!parse_common_options(ast, 2, out, &reason)) {
+      out->status = CLI_VALIDATE_SYNTAX;
+      out->reason = reason;
+      return 1;
+    }
+    return 1;
+  }
 
   if (ast->kind == CLI_AST_HUB) {
     if (ast->arg0 == 0) {
@@ -191,7 +290,6 @@ int cli_validate_ast(const cli_ast_t* ast, cli_mode_t mode, cli_validated_comman
     out->reason = "DENY: command not allowed in microvm mode";
     return 1;
   }
-
 
   if (ast->kind == CLI_AST_CAP_EXPLAIN) {
     if (!job_profile_from_flag(ast->arg0, &out->profile)) {

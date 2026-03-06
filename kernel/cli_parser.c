@@ -66,6 +66,10 @@ int cli_parse_line(const char* line, cli_parse_buffer_t* buffer, cli_ast_t* ast_
   ast_out->arg0 = 0;
   ast_out->arg1 = 0;
   ast_out->arg2 = 0;
+  ast_out->arg3 = 0;
+  ast_out->arg4 = 0;
+  ast_out->arg5 = 0;
+  ast_out->arg6 = 0;
 
   if (buffer->token_count == 0) {
     ast_out->kind = CLI_AST_EMPTY;
@@ -83,7 +87,8 @@ int cli_parse_line(const char* line, cli_parse_buffer_t* buffer, cli_ast_t* ast_
   if (buffer->token_count >= 2 && streq(buffer->tokens[1], "--help")) {
     if (streq(buffer->tokens[0], "status") || streq(buffer->tokens[0], "ticks") || streq(buffer->tokens[0], "malloc") ||
         streq(buffer->tokens[0], "cap") || streq(buffer->tokens[0], "job") || streq(buffer->tokens[0], "hub") || streq(buffer->tokens[0], "home") ||
-        streq(buffer->tokens[0], "welcome") || streq(buffer->tokens[0], "onboarding") || streq(buffer->tokens[0], "help")) {
+        streq(buffer->tokens[0], "welcome") || streq(buffer->tokens[0], "onboarding") || streq(buffer->tokens[0], "find") ||
+        streq(buffer->tokens[0], "search") || streq(buffer->tokens[0], "session") || streq(buffer->tokens[0], "help")) {
       ast_out->kind = CLI_AST_HELP;
       ast_out->arg0 = buffer->tokens[0];
       return 1;
@@ -140,6 +145,46 @@ int cli_parse_line(const char* line, cli_parse_buffer_t* buffer, cli_ast_t* ast_
     if (buffer->token_count >= 2) ast_out->arg0 = buffer->tokens[1];
     if (buffer->token_count >= 3) ast_out->arg1 = buffer->tokens[2];
     if (buffer->token_count >= 4) ast_out->arg2 = buffer->tokens[3];
+    if (buffer->token_count >= 5) ast_out->arg3 = buffer->tokens[4];
+    if (buffer->token_count >= 6) ast_out->arg4 = buffer->tokens[5];
+    if (buffer->token_count >= 7) ast_out->arg5 = buffer->tokens[6];
+    if (buffer->token_count >= 8) ast_out->arg6 = buffer->tokens[7];
+    return 1;
+  }
+
+  if (streq(buffer->tokens[0], "find")) {
+    ast_out->kind = CLI_AST_FIND;
+    if (buffer->token_count >= 2) ast_out->arg0 = buffer->tokens[1];
+    if (buffer->token_count >= 3) ast_out->arg1 = buffer->tokens[2];
+    if (buffer->token_count >= 4) ast_out->arg2 = buffer->tokens[3];
+    if (buffer->token_count >= 5) ast_out->arg3 = buffer->tokens[4];
+    if (buffer->token_count >= 6) ast_out->arg4 = buffer->tokens[5];
+    if (buffer->token_count >= 7) ast_out->arg5 = buffer->tokens[6];
+    if (buffer->token_count >= 8) ast_out->arg6 = buffer->tokens[7];
+    return 1;
+  }
+
+  if (streq(buffer->tokens[0], "search")) {
+    ast_out->kind = CLI_AST_SEARCH;
+    if (buffer->token_count >= 2) ast_out->arg0 = buffer->tokens[1];
+    if (buffer->token_count >= 3) ast_out->arg1 = buffer->tokens[2];
+    if (buffer->token_count >= 4) ast_out->arg2 = buffer->tokens[3];
+    if (buffer->token_count >= 5) ast_out->arg3 = buffer->tokens[4];
+    if (buffer->token_count >= 6) ast_out->arg4 = buffer->tokens[5];
+    if (buffer->token_count >= 7) ast_out->arg5 = buffer->tokens[6];
+    if (buffer->token_count >= 8) ast_out->arg6 = buffer->tokens[7];
+    return 1;
+  }
+
+  if (streq(buffer->tokens[0], "session")) {
+    ast_out->kind = CLI_AST_SESSION;
+    if (buffer->token_count >= 2) ast_out->arg0 = buffer->tokens[1];
+    if (buffer->token_count >= 3) ast_out->arg1 = buffer->tokens[2];
+    if (buffer->token_count >= 4) ast_out->arg2 = buffer->tokens[3];
+    if (buffer->token_count >= 5) ast_out->arg3 = buffer->tokens[4];
+    if (buffer->token_count >= 6) ast_out->arg4 = buffer->tokens[5];
+    if (buffer->token_count >= 7) ast_out->arg5 = buffer->tokens[6];
+    if (buffer->token_count >= 8) ast_out->arg6 = buffer->tokens[7];
     return 1;
   }
 

@@ -19,6 +19,9 @@ typedef enum {
   CLI_AST_CAP_SHOW,
   CLI_AST_CAP_CHECK,
   CLI_AST_CAP_EXPLAIN,
+  CLI_AST_FIND,
+  CLI_AST_SEARCH,
+  CLI_AST_SESSION,
   CLI_AST_UNKNOWN,
 } cli_ast_kind_t;
 
@@ -27,6 +30,10 @@ typedef struct {
   const char* arg0;
   const char* arg1;
   const char* arg2;
+  const char* arg3;
+  const char* arg4;
+  const char* arg5;
+  const char* arg6;
 } cli_ast_t;
 
 typedef struct {
