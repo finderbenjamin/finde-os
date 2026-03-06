@@ -95,13 +95,23 @@ static uint32_t op_to_rights(const char* operation) {
 
 static void print_help_topic(const char* topic) {
   if (topic == 0 || streq(topic, "help")) {
-    console_write("help\n");
-    console_write("  Zweck: Zeigt Hilfe fuer alle Befehle oder ein Thema.\n");
-    console_write("  Syntax: help [command]\n");
+    console_write("finde-os command map\n");
+    console_write("  Schnellstart: welcome\n");
+    console_write("  Hilfe: help <command> oder <command> --help\n");
+    console_write("  Verfuegbare Commands:\n");
+    console_write("    help                 Hilfe-Index und Details\n");
+    console_write("    welcome              Onboarding mit 7 Schritten\n");
+    console_write("    status               Aktiven Isolationsmodus zeigen\n");
+    console_write("    ticks                Timer-Ticks seit Boot anzeigen\n");
+    console_write("    malloc               Heap-Test (nur sandbox)\n");
+    console_write("    cap                  Capabilities listen/pruefen/erklaeren\n");
+    console_write("    job                  Jobs starten und verwalten\n");
+    console_write("    hub|home             TUI-Hub mit Panels\n");
+    console_write("  Hub-Shortcuts (vom Prompt): j=jobs, l=logs, r=retry, q=quit\n");
     console_write("  Beispiele:\n");
-    console_write("    help\n");
-    console_write("    help status\n");
-    console_write("    cap --help\n");
+    console_write("    help job\n");
+    console_write("    job --help\n");
+    console_write("    hub\n");
     console_write("  Exit-Codes: 0 ok, 2 unbekanntes Thema\n");
     return;
   }

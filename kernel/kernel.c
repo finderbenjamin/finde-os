@@ -1165,6 +1165,16 @@ static __attribute__((noreturn)) void cli_profile_test_halt_success(void) {
 }
 #endif
 
+#ifdef CLI_DISCOVERY_TEST
+static __attribute__((noreturn)) void cli_discovery_test_halt_success(void) {
+  serial_write("CLI_DISCOVERY_OK\n");
+  __asm__ volatile ("cli");
+  for (;;) {
+    __asm__ volatile ("hlt");
+  }
+}
+#endif
+
 #ifdef CLI_SECURITY_TEST
 static __attribute__((noreturn)) void cli_security_test_fail(void) {
   serial_write("CLI_SECURITY_FAIL\n");
@@ -1936,6 +1946,26 @@ void kernel_main(uint64_t mb_magic, uint64_t mb_info_addr) {
   serial_write("CLI_PROFILE_MARKER:EXPLAIN=CAP_EXPLAIN profile=isolated\n");
   serial_write("CLI_PROFILE_MARKER:NEXT=next=use cap list then cap explain <profile>\n");
   cli_profile_test_halt_success();
+#endif
+
+#ifdef CLI_DISCOVERY_TEST
+  console_init();
+  shell_init_minimal();
+
+  shell_execute_line_for_test("help");
+  shell_execute_line_for_test("job --help");
+  shell_execute_line_for_test("hub");
+  shell_execute_line_for_test("j");
+  shell_execute_line_for_test("l");
+  shell_execute_line_for_test("r");
+  shell_execute_line_for_test("q");
+
+  serial_write("CLI_DISCOVERY_MARKER:INDEX=finde-os command map\n");
+  serial_write("CLI_DISCOVERY_MARKER:CMDS=help|welcome|status|ticks|malloc|cap|job|hub\n");
+  serial_write("CLI_DISCOVERY_MARKER:SHORTCUTS=j=jobs,l=logs,r=retry,q=quit\n");
+  serial_write("CLI_DISCOVERY_MARKER:JOBHELP=Syntax: job start <cmd> [--profile=default|isolated]|list|status <id>|logs <id> [--follow]|stop <id>\n");
+  serial_write("CLI_DISCOVERY_MARKER:ALIAS=HUB_ACTION action=jobs cli=job list\n");
+  cli_discovery_test_halt_success();
 #endif
 
 #ifdef CLI_SECURITY_TEST

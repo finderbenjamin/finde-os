@@ -517,7 +517,7 @@ if ! tr -d '\r' < cli_help_log.txt | grep -Fq "CLI_HELP_MARKER:SUGGEST=Did you m
   exit 1
 fi
 
-echo "[46/48] CLI job command check"
+echo "[46/49] CLI job command check"
 make clean
 make CLI_JOB_TEST=1
 run_qemu cli_job_log.txt
@@ -532,7 +532,7 @@ if ! tr -d '\r' < cli_job_log.txt | grep -Fq "CLI_JOB_MARKER:NOT_FOUND=JOB_ERROR
   exit 1
 fi
 
-echo "[47/48] CLI hub command check"
+echo "[47/49] CLI hub command check"
 make clean
 make CLI_HUB_TEST=1
 run_qemu cli_hub_log.txt
@@ -547,7 +547,7 @@ if ! tr -d '\r' < cli_hub_log.txt | grep -Fq "CLI_HUB_MARKER:FOOTER=Shortcuts: [
   exit 1
 fi
 
-echo "[48/48] CLI profile/capability UX check"
+echo "[48/49] CLI profile/capability UX check"
 make clean
 make CLI_PROFILE_TEST=1
 run_qemu cli_profile_log.txt
@@ -565,6 +565,27 @@ fi
 if ! tr -d '\r' < cli_profile_log.txt | grep -Fq "CLI_PROFILE_MARKER:EXPLAIN=CAP_EXPLAIN profile=isolated"; then
   echo "Expected cap explain marker not found" >&2
   echo "Expected suggestion marker not found" >&2
+  exit 1
+fi
+
+
+echo "[49/49] CLI command discoverability check"
+make clean
+make CLI_DISCOVERY_TEST=1
+run_qemu cli_discovery_log.txt
+
+if ! tr -d '\r' < cli_discovery_log.txt | grep -Fq "CLI_DISCOVERY_OK"; then
+  echo "Expected serial marker CLI_DISCOVERY_OK not found" >&2
+  exit 1
+fi
+
+if ! tr -d '\r' < cli_discovery_log.txt | grep -Fq "CLI_DISCOVERY_MARKER:SHORTCUTS=j=jobs,l=logs,r=retry,q=quit"; then
+  echo "Expected shortcut marker not found" >&2
+  exit 1
+fi
+
+if ! tr -d '\r' < cli_discovery_log.txt | grep -Fq "CLI_DISCOVERY_MARKER:ALIAS=HUB_ACTION action=jobs cli=job list"; then
+  echo "Expected shortcut alias action marker not found" >&2
   exit 1
 fi
 
