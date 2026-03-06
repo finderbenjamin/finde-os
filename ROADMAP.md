@@ -82,3 +82,5 @@
 47) CLI job profiles + capability explain UX (secure-by-default profile, deny next-step guidance) test -> "CLI_PROFILE_OK"
 
 48) CLI command discoverability + shortcut aliases (vollstaendige Hilfe + j/l/r/q Alias) test -> "CLI_DISCOVERY_OK"
+
+49) CLI workflow core commands (find/search/session + gemeinsame Optionen --json/--limit/--path + sichere Defaults + Pipeline-Ausgabe) test -> "CLI_WORKFLOW_OK"

@@ -589,4 +589,25 @@ if ! tr -d '\r' < cli_discovery_log.txt | grep -Fq "CLI_DISCOVERY_MARKER:ALIAS=H
   exit 1
 fi
 
+
+echo "[50/50] CLI workflow commands check"
+make clean
+make CLI_WORKFLOW_TEST=1
+run_qemu cli_workflow_log.txt
+
+if ! tr -d '\r' < cli_workflow_log.txt | grep -Fq "CLI_WORKFLOW_OK"; then
+  echo "Expected serial marker CLI_WORKFLOW_OK not found" >&2
+  exit 1
+fi
+
+if ! tr -d '\r' < cli_workflow_log.txt | grep -Fq "CLI_WORKFLOW_MARKER:COMMON_FLAGS=--json|--limit|--path"; then
+  echo "Expected common option marker not found" >&2
+  exit 1
+fi
+
+if ! tr -d '\r' < cli_workflow_log.txt | grep -Fq "CLI_WORKFLOW_MARKER:SESSION_RESTORE=SESSION_RESTORED name=sprint42 path=/state"; then
+  echo "Expected session restore marker not found" >&2
+  exit 1
+fi
+
 echo "PASS"

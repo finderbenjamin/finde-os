@@ -27,6 +27,10 @@ typedef struct {
   int follow;
   job_profile_t profile;
   cli_mode_t mode;
+  int json_output;
+  uint64_t limit;
+  const char* path;
+  const char* target;
 } cli_validated_command_t;
 
 int cli_validate_ast(const cli_ast_t* ast, cli_mode_t mode, cli_validated_command_t* out);

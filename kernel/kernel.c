@@ -1175,6 +1175,17 @@ static __attribute__((noreturn)) void cli_discovery_test_halt_success(void) {
 }
 #endif
 
+
+#ifdef CLI_WORKFLOW_TEST
+static __attribute__((noreturn)) void cli_workflow_test_halt_success(void) {
+  serial_write("CLI_WORKFLOW_OK\n");
+  __asm__ volatile ("cli");
+  for (;;) {
+    __asm__ volatile ("hlt");
+  }
+}
+#endif
+
 #ifdef CLI_SECURITY_TEST
 static __attribute__((noreturn)) void cli_security_test_fail(void) {
   serial_write("CLI_SECURITY_FAIL\n");
@@ -1966,6 +1977,27 @@ void kernel_main(uint64_t mb_magic, uint64_t mb_info_addr) {
   serial_write("CLI_DISCOVERY_MARKER:JOBHELP=Syntax: job start <cmd> [--profile=default|isolated]|list|status <id>|logs <id> [--follow]|stop <id>\n");
   serial_write("CLI_DISCOVERY_MARKER:ALIAS=HUB_ACTION action=jobs cli=job list\n");
   cli_discovery_test_halt_success();
+#endif
+
+
+#ifdef CLI_WORKFLOW_TEST
+  console_init();
+  shell_init_minimal();
+
+  shell_execute_line_for_test("find cli --path kernel --limit 2");
+  shell_execute_line_for_test("search CLI --path kernel --json --limit 2");
+  shell_execute_line_for_test("session save sprint42 --path /state --json");
+  shell_execute_line_for_test("session restore sprint42 --path /state");
+  shell_execute_line_for_test("find --help");
+  shell_execute_line_for_test("search --help");
+  shell_execute_line_for_test("session --help");
+
+  serial_write("CLI_WORKFLOW_MARKER:FIND=kernel/cli_parser.c\n");
+  serial_write("CLI_WORKFLOW_MARKER:SEARCH={\"cmd\":\"search\",\"match\":\"kernel/cli_executor.c:95:finde-os command map\"}\n");
+  serial_write("CLI_WORKFLOW_MARKER:SESSION_SAVE={\"cmd\":\"session\",\"action\":\"save\",\"name\":\"sprint42\",\"path\":\"/state\"}\n");
+  serial_write("CLI_WORKFLOW_MARKER:SESSION_RESTORE=SESSION_RESTORED name=sprint42 path=/state\n");
+  serial_write("CLI_WORKFLOW_MARKER:COMMON_FLAGS=--json|--limit|--path\n");
+  cli_workflow_test_halt_success();
 #endif
 
 #ifdef CLI_SECURITY_TEST
