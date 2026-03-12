@@ -25,3 +25,4 @@ make
 run_qemu
 
 grep -q "BOOT_OK" log.txt
+grep -q "SCROLL_OK" log.txt
